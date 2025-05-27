@@ -17,8 +17,8 @@
   <section id="home">
     <div class="@container">
       <div class="max-w-full self-center">
-        <div class="relative overflow-hidden h-[400px] lg:h-[600px]">
-          <div class="absolute z-0 bottom-5 w-[120vh] h-[120vh] lg:bottom-15 left-1/2  transform -translate-x-1/2 md:w-[200vw] md:h-[200vw] bg-secondary rounded-full"></div>
+        <div class="relative overflow-hidden h-[400px] lg:h-[600px] pixxy:h-[60vh]">
+          <div class="absolute z-0 bottom-5 w-[120vw] 2xl:w-[210vw] h-[120vh] lg:bottom-15 left-1/2 transform 2xl:translate-y-10  gipsy:translate-y-15 -translate-x-1/2 md:w-[200vw] md:h-[200vw] bg-secondary rounded-full"></div>
           <div class="relative z-30 top-5 items-center flex flex-wrap justify-between lg:justify-center lg:bg-secondary/25 lg:backdrop-blur-sm lg:fixed lg:w-7/8 lg:top-10 lg:left-1/2 lg:transform lg:-translate-x-1/2 lg:border-4 lg:border-primary lg:rounded-full lg:py-2 lg:px-6">
             <div class="pl-4 lg:w-1/2">
               <a href="#" class="block lg:inline px-2 text-xl text-primary font-inter font-extrabold md:text-2xl">An-Dzuru</a>
@@ -39,7 +39,7 @@
           </div>
           <img src="src/img/blob.svg" class="absolute scale-95 md:scale-180 lg:scale-260 z-20 rotate-z-30 -left-13 md:left-0 lg:left-14 lg:top-10">
           <img src="src/img/blob.svg" class="absolute scale-140 md:scale-240 lg:scale-330 2xl:scale-400 z-20 -rotate-z-40 -right-8 -top-10 md:-right-4 md:-top-5 lg:top-0">
-          <nav id="nav-menu" class="absolute right-8 top-15 hidden w-full max-w-[180px] rounded-lg bg-secondary py-2 z-[9999] shadow-lg right-0 border-2 border-primary">
+          <nav id="nav-menu" class="absolute right-8 top-15 hidden w-full max-w-[180px] rounded-lg bg-secondary py-2 z-[50] shadow-lg border-2 border-primary">
             <ul class="block">
               <li class="group">
                 <a href="#home" class="mx-4 flex py-2 text-base text-primary group-hover:text-tersier md:text-lg">About Us</a>
@@ -134,6 +134,9 @@
               <span class="font-bold text-4xl lg:text-2xl md:text-5xl 2xl:text-6xl text-red-500">POOR<br></span>
               condition
             </p>
+            <button id="info-button" class="justify-self-end bg-primary hover:bg-tersier active:bg-white active:text-secondary hover:text-primary hover:bg-tersier text-white px-8 mb-10 cursor-pointer rounded-[40px] font-bold text-lg">
+              Info
+            </button>
           </div>
         </div>
       </div>
@@ -165,6 +168,40 @@
     </div>
   </footer>
   <!-- Footer Section End -->
+
+  <section id="modal-container-1" class="fixed hidden z-[1000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-900 opacity-85"></section>
+  <section id="modal-container-2" class="fixed hidden z-[2000] left-0 top-0 w-full h-full overflow-auto">
+    <div class="flex justify-center items-start min-h-screen py-10">
+      <div id="modal-main" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-10 pr-10 pb-6 w-[70vw] max-w-[90vw] opacity-100">
+        <h2 class="text-3xl font-bold text-primary my-6">How to use these systems?</h2>
+        <div>
+          <p class="text-lg/8 text-primary">This system is designed to assist chili farmers in monitoring soil conditions and managing watering automatically. Here are the steps to use it:</p>
+        </div>
+        <div>
+          <ol class="list-decimal list-outside pl-4 text-lg/8 text-primary mb-4">
+            <li>Make sure the IoT device is well connected to the internet network.</li>
+            <li>Check the soil moisture and pH values displayed on the dashboard.</li>
+            <li>If the soil moisture is below the set threshold, press the “Flush” button to activate the watering pump.</li>
+            <li>Monitor historical data graphs to see trends in soil moisture and pH over time.</li>
+            <li>Use this information to make informed decisions in the management of your chili fields.</li>
+          </ol>
+        </div>
+        <div class="mt-6">
+          <h4 class="text-xl/8 font-bold text-primary">Irrigation</h4>
+          <p class="text-lg/8 text-primary mb-4 text-wrap">Press FLUSH to turn on the watering pump for 30 seconds.</p>
+        </div>
+        <div class="mt-6">
+          <h4 class="text-xl/8 font-bold text-primary">Data Graph</h4>
+          <p class="text-lg/8 text-primary mb-4 text-wrap">Data will be updated in real-time. Users are able to view data history for the previous 20 time periods.</p>
+        </div>
+        <div class="mt-6 mb-6">
+          <h4 class="text-xl/8 font-bold text-primary">Ground Status</h4>
+          <p class="text-lg/8 text-primary mb-4 text-wrap">The soil status will turn red and have <strong>POOR</strong> status only if the moisture value is less than 15% or more than 85% and if the pH value is less than 5.5 or more than 8.5. Otherwise, the soil status will turn green and have a <strong>GOOD</strong> status.</p>
+          <button id="close-modal" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="./src/index.mjs"></script>

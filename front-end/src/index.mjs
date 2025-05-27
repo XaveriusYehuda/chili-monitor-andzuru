@@ -58,13 +58,26 @@ window.nyalakanPompa = () => {
     return;
   }
 
+  const uploadTime = moment().format('YYYY-MM-DD HH:mm:ss');
+  const flushButton = document.getElementById('flushButton');
+
+  flushButton.classList.add('opacity-80');
+  flushButton.disabled = true; // Nonaktifkan tombol flush
+  flushButton.textContent = 'Sending...'; // Ubah teks tombol
+  setTimeout(() => {
+    flushButton.classList.remove('opacity-80');
+    flushButton.disabled = false; // Aktifkan kembali tombol setelah 5 detik
+    flushButton.textContent = 'Flush'; // Kembalikan teks tombol
+  }, 5000);
+
+
   const payload = JSON.stringify({ action: 'nyala' });
 
   client.publish('device/pompa', payload, { qos: 1 }, (err) => {
     if (err) {
       console.error('🚫 Publish error:', err);
     } else {
-      console.log('📤 Pompa nyala command terkirim.');
+      console.log('📤 Pompa nyala command dikirim pada', uploadTime);
     }
   });
 };
@@ -140,7 +153,7 @@ const setupWebSocket = () => {
       const goodGroundStatus = document.getElementById('ground-good-status');
       const poorGroundStatus = document.getElementById('ground-poor-status');
 
-      if (fixPh > 8.5 || fixPh < 5.5 || fixHumidity > 80.00 || fixHumidity < 20.00) {
+      if (fixPh > 8.5 || fixPh < 5.5 || fixHumidity > 90.00 || fixHumidity < 10.00) {
         goodGroundStatus.classList.add('hidden');
         poorGroundStatus.classList.remove('hidden');
       } else {
@@ -310,6 +323,7 @@ const myChartHumidity = new Chart(
 const Hamburger = document.querySelector('#hamburger');
 const navMenu = document.querySelector('#nav-menu');
 
+
 Hamburger.addEventListener('click', function () {
   Hamburger.classList.toggle('hamburger-active');
   navMenu.classList.toggle('hidden');
@@ -320,6 +334,29 @@ window.addEventListener('click', function (e) {
   if (e.target != Hamburger && e.target != navMenu) {
     hamburger.classList.remove('hamburger-active');
     navMenu.classList.add('hidden');
+  }
+});
+
+//modal
+const modal1 = document.getElementById('modal-container-1');
+const modal2 = document.getElementById('modal-container-2');
+const modalMain = document.getElementById('modal-main');
+const infoButton = document.getElementById('info-button');
+const closeButton = document.getElementById('close-modal');
+
+infoButton.addEventListener('click', () => {
+  modal1.classList.remove('hidden');
+  modal2.classList.remove('hidden');
+});
+closeButton.addEventListener('click', () => {
+  modal1.classList.add('hidden');
+  modal2.classList.add('hidden');
+});
+
+window.addEventListener('click', function (e) {
+  if (!modalMain.contains(e.target) && !infoButton.contains(e.target)) {
+    modal1.classList.add('hidden');
+    modal2.classList.add('hidden');
   }
 });
 

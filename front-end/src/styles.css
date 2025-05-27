@@ -10,6 +10,9 @@
 
   --breakpoint-md: 460px;
   --breakpoint-vxl: 1920px;
+  --breakpoint-2xl: 2100px;
+  --breakpoint-pixxy: 2560px;
+  --breakpoint-gipsy: 1650px;
 
   --inset-shadow-total: inset -15px -15px 0 rgba(161, 227, 249, 1);
 
