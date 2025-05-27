@@ -1,0 +1,10 @@
+node_modules/
+<<<<<<< HEAD
+
+.env
+
+Dockerfile
+=======
+.env
+Dockerfile
+>>>>>>> 138c4ae (sss)

@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+@theme {
+  --font-display: "Inter", "sans-serif";
+
+  --color-primary : #3098BB ;
+  --color-secondary : #D3F4FF ;
+  --color-tersier : #A1E3F9 ;
+
+  --breakpoint-md: 460px;
+  --breakpoint-vxl: 1920px;
+
+  --inset-shadow-total: inset -15px -15px 0 rgba(161, 227, 249, 1);
+
+}
+
+.hamburger-active > span:nth-child(1) {
+  @apply rotate-45;
+}
+
+.hamburger-active > span:nth-child(2) {
+  @apply scale-0;
+}
+
+.hamburger-active > span:nth-child(3) {
+  @apply -rotate-45;
+}
+
+#dark-toggle:checked ~ label div.toggle-circle {
+  @apply translate-x-3;
+}
