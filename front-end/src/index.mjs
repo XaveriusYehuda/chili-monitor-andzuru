@@ -63,12 +63,15 @@ window.nyalakanPompa = () => {
 
   flushButton.classList.add('opacity-80');
   flushButton.disabled = true; // Nonaktifkan tombol flush
-  flushButton.textContent = 'Sending...'; // Ubah teks tombol
+  flushButton.textContent = 'Sending ...'; // Ubah teks tombol
+  setTimeout(() => {
+    flushButton.textContent = 'Flushing ...'; // Kembalikan teks tombol
+  }, 2000);
   setTimeout(() => {
     flushButton.classList.remove('opacity-80');
     flushButton.disabled = false; // Aktifkan kembali tombol setelah 5 detik
     flushButton.textContent = 'Flush'; // Kembalikan teks tombol
-  }, 5000);
+  }, 30000);
 
 
   const payload = JSON.stringify({ action: 'nyala' });
