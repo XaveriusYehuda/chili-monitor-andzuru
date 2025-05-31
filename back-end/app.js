@@ -30,13 +30,17 @@ function normalizeTimestamp(timestamp) {
 }
 
 function addDataToCache(nilaiSensor, dataItem) {
+  if (dataItem.value === null || dataItem.value === undefined || isNaN(dataItem.value)) {
+    console.warn(`⛔ Data tidak valid (${nilaiSensor}), tidak disimpan:`, dataItem);
+    return;
+  }
+
   if (!sensorDataCache.has(nilaiSensor)) {
     sensorDataCache.set(nilaiSensor, []);
   }
 
   const cache = sensorDataCache.get(nilaiSensor);
 
-  // Normalize timestamp
   const normalizedTimestamp = normalizeTimestamp(dataItem.timestamp);
 
   cache.push({
@@ -44,11 +48,14 @@ function addDataToCache(nilaiSensor, dataItem) {
     value: dataItem.value
   });
 
-  // Sort cache berdasarkan timestamp ascending
   cache.sort((a, b) => a.timestamp - b.timestamp);
 
-  if (cache.length > 10) cache.shift(); // FIFO (maksimal 10 data)
+  if (cache.length > 10) {
+    cache.shift(); // FIFO
+    // console.log(`♻️ FIFO: Data lama dihapus dari ${nilaiSensor}`);
+  }
 }
+
 
 
 
