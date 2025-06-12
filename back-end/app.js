@@ -60,99 +60,170 @@ function addDataToCache(nilaiSensor, dataItem) {
 
 
 // Client WebSocket ke server eksternal (AWS)
-const wsExternal = new WebSocket('wss://0p3brxy598.execute-api.ap-southeast-1.amazonaws.com/production');
+const wsExternalUrl  = 'wss://0p3brxy598.execute-api.ap-southeast-1.amazonaws.com/production';
 
-wsExternal.on('open', () => {
-  console.log('Connected to AWS WebSocket');
-  setTimeout(() => {
-    wsExternal.send(JSON.stringify({ action: 'getLastData' }));
-  }, 500);
-});
+let wsExternal;
+let reconnectInterval; // Untuk mengatur interval reconnection
 
-wsExternal.on('message', (message) => {
-  try {
-    // console.log('Pesan diterima dari server:', message.toString());
-    const parsed = JSON.parse(message);
-    if (parsed.action === 'initialData') {
-      // console.log('Received initial data:', parsed.data);
+function connectAwsWebSocket() {
+  // Clear any existing reconnect interval to prevent multiple connections
+  if (reconnectInterval) {
+    clearInterval(reconnectInterval);
+  }
 
-      Object.entries(parsed.data).forEach(([sensorType, dataArray]) => {
-        dataArray.forEach(item => {
-          const payload = item.payload;
-          const nilaiSensor = item.nilaiSensor;
-          const timestamp = item.time || (payload?.timestamp ?? Date.now());
+  // Hindari membuat koneksi baru jika sudah terbuka atau sedang dalam proses
+  if (wsExternal && (wsExternal.readyState === WebSocket.OPEN || wsExternal.readyState === WebSocket.CONNECTING)) {
+    console.log('AWS WebSocket sudah terhubung atau sedang menyambung. Tidak membuat koneksi baru.');
+    return;
+  }
 
-          if (!payload || typeof payload !== 'object') {
-            console.warn('Payload tidak sesuai:', payload);
-            return;
-          }
+  console.log('🔗 Mencoba menyambung ke AWS WebSocket:', wsExternalUrl);
+  wsExternal = new WebSocket(wsExternalUrl);
 
-          function extractSensorValue(payload) {
-            return payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null;
-          }
-
-          const simplifiedData = {
-            timestamp: timestamp,
-            value: extractSensorValue(payload)
-          };
-
-          addDataToCache(nilaiSensor, simplifiedData);
-        });
-      });
-
-      // Tampilkan isi cache
-      // console.log('Isi sensorDataCache:');
-      sensorDataCache.forEach((value, key) => {
-        // console.log(`Sensor: ${key}`);
-        // console.log(value);
-        // console.table(value);
-      });
+  wsExternal.onopen = () => {
+    console.log('✅ Connected to AWS WebSocket');
+    // Request initial data setiap kali terhubung
+    setTimeout(() => {
+      wsExternal.send(JSON.stringify({ action: 'getLastData' }));
+    }, 500);
+    // Reset reconnect attempts on successful connection
+    if (reconnectInterval) {
+      clearInterval(reconnectInterval);
+      reconnectInterval = null;
     }
+  };
 
-    if (parsed.action === 'dataUpdate') {
-      // console.log('Accepted Data: ', parsed.data);
+  wsExternal.on('message', (message) => {
+    try {
+      // console.log('Pesan diterima dari server:', message.toString());
+      const parsed = JSON.parse(message);
+      if (parsed.action === 'initialData') {
+        // console.log('Received initial data:', parsed.data);
 
-      const sensorPayload = parsed.data;
-      // Jika `parsed.data` adalah array → forEach
-      if (Array.isArray(sensorPayload)) {
-        sensorPayload.forEach((item) => {
-          const { nilaiSensor, payload, time } = item;
+        Object.entries(parsed.data).forEach(([sensorType, dataArray]) => {
+          dataArray.forEach(item => {
+            const payload = item.payload;
+            const nilaiSensor = item.nilaiSensor;
+            const timestamp = item.time || (payload?.timestamp ?? Date.now());
+
+            if (!payload || typeof payload !== 'object') {
+              console.warn('Payload tidak sesuai:', payload);
+              return;
+            }
+
+            function extractSensorValue(payload) {
+              return payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null;
+            }
+
+            const simplifiedData = {
+              timestamp: timestamp,
+              value: extractSensorValue(payload)
+            };
+
+            addDataToCache(nilaiSensor, simplifiedData);
+          });
+        });
+
+        broadcastLatestCacheData();
+
+        // Tampilkan isi cache
+        // console.log('Isi sensorDataCache:');
+        // sensorDataCache.forEach((value, key) => {
+          // console.log(`Sensor: ${key}`);
+          // console.log(value);
+          // console.table(value);
+        // });
+      }
+
+      if (parsed.action === 'dataUpdate') {
+        // console.log('Accepted Data: ', parsed.data);
+
+        const sensorPayload = parsed.data;
+        // Jika `parsed.data` adalah array → forEach
+        if (Array.isArray(sensorPayload)) {
+          sensorPayload.forEach((item) => {
+            const { nilaiSensor, payload, time } = item;
+
+            const simplifiedData = {
+              timestamp: payload.timestamp,
+              value: payload.Ph ?? payload.Kelembapan,
+            };
+
+            addDataToCache(nilaiSensor, simplifiedData);
+          });
+        } else if (typeof sensorPayload === 'object') {
+          // Jika `parsed.data` adalah objek tunggal
+          const { nilaiSensor, payload, time } = sensorPayload;
 
           const simplifiedData = {
             timestamp: payload.timestamp,
-            value: payload.Ph ?? payload.Kelembapan,
+            value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
           };
 
           addDataToCache(nilaiSensor, simplifiedData);
-        });
-      } else if (typeof sensorPayload === 'object') {
-        // Jika `parsed.data` adalah objek tunggal
-        const { nilaiSensor, payload, time } = sensorPayload;
-
-        const simplifiedData = {
-          timestamp: payload.timestamp,
-          value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
         };
 
-        addDataToCache(nilaiSensor, simplifiedData);
-      };
-
-      // Tampilkan isi cache
-      // console.log('Isi sensorDataCache:');
-      sensorDataCache.forEach((value, key) => {
-        // console.log(`Sensor: ${key}`);
-        // console.log(value);
-        // console.table(value);
-      });
+        broadcastLatestCacheData();
+        // Tampilkan isi cache
+        // console.log('Isi sensorDataCache:');
+        // sensorDataCache.forEach((value, key) => {
+          // console.log(`Sensor: ${key}`);
+          // console.log(value);
+          // console.table(value);
+        // });
+      }
+    } catch (error) {
+      console.error('Error parsing external WebSocket message:', error);
     }
-  } catch (error) {
-    console.error('Error parsing external WebSocket message:', error);
-  }
-});
+  });
 
-wsExternal.on('close', (code, reason) => {
-  console.log(`External WebSocket closed. Code: ${code}, Reason: ${reason}`);
-});
+  wsExternal.on('close', (code, reason) => {
+    console.warn(`External WebSocket closed. Code: ${code}, Reason: ${reason}`);
+    // Hanya atur interval jika belum ada atau sudah selesai
+    if (!reconnectInterval) {
+      reconnectInterval = setInterval(() => {
+        console.log('🔁 Reconnect attempt for AWS WebSocket...');
+        connectAwsWebSocket();
+      }, 5000); // Coba reconnect setiap 5 detik
+    }
+  });
+
+  wsExternal.onerror = (error) => {
+    console.error('External WebSocket error:', error);
+    // Tutup koneksi agar 'onclose' terpicu dan mencoba reconnect
+    wsExternal.close();
+  };
+}
+
+// Fungsi untuk broadcast data cache terbaru ke semua client lokal
+function broadcastLatestCacheData() {
+  const phData = sensorDataCache.get('device/ph') || [];
+  const humidityData = sensorDataCache.get('device/humidity') || [];
+
+  const latestPh = phData[phData.length - 1]?.value ?? null;
+  const latestHumidity = humidityData[humidityData.length - 1]?.value ?? null;
+
+  const message = {
+    topic: 'cacheUpdate', // Gunakan topik yang berbeda untuk update dari cache
+    data: {
+      Ph: latestPh,
+      Kelembapan: latestHumidity
+    },
+    timestamp: new Date().toISOString(),
+    chartData: {
+      ph: extractChartData(phData),
+      humidity: extractChartData(humidityData)
+    }
+  };
+
+  const messageString = JSON.stringify(message);
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messageString);
+      // console.log('Broadcast cache update ke client:', messageString);
+    }
+  });
+}
 
 // Fungsi bantu untuk chart
 function extractChartData(sensorArray) {
@@ -218,6 +289,9 @@ mqttService.setMessageHandler((topic, payload) => {
   }
 });
 
+// Panggil fungsi koneksi saat server dimulai
+connectAwsWebSocket();
+
 // WebSocket lokal untuk client UI
 wss.on('connection', (ws) => {
   // console.log('New WebSocket client connected');
@@ -227,34 +301,36 @@ wss.on('connection', (ws) => {
   ws.on('pong', () => ws.isAlive = true);
 
   // Saat client baru connect, kirim data cache
-  try {
-    const phData = sensorDataCache.get('device/ph') || [];
-    const humidityData = sensorDataCache.get('device/humidity') || [];
+  // try {
+  //   const phData = sensorDataCache.get('device/ph') || [];
+  //   const humidityData = sensorDataCache.get('device/humidity') || [];
 
-    const latestPh = phData[phData.length - 1]?.value ?? null;
-    const latestHumidity = humidityData[humidityData.length - 1]?.value ?? null;
+  //   const latestPh = phData[phData.length - 1]?.value ?? null;
+  //   const latestHumidity = humidityData[humidityData.length - 1]?.value ?? null;
 
-    const message = {
-      topic: 'initialCacheData',
-      data: {
-        Ph: latestPh,
-        Kelembapan: latestHumidity
-      },
-      timestamp: new Date().toISOString(),
-      chartData: {
-        ph: extractChartData(phData),
-        humidity: extractChartData(humidityData)
-      }
-    };
+  //   const message = {
+  //     topic: 'initialCacheData',
+  //     data: {
+  //       Ph: latestPh,
+  //       Kelembapan: latestHumidity
+  //     },
+  //     timestamp: new Date().toISOString(),
+  //     chartData: {
+  //       ph: extractChartData(phData),
+  //       humidity: extractChartData(humidityData)
+  //     }
+  //   };
 
-    const messageString = JSON.stringify(message);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(messageString);
-      // console.log('🚀 Kirim data cache awal ke client:', messageString);
-    }
-  } catch (error) {
-    console.error('Error sending initial cache to client:', error);
-  }
+  //   const messageString = JSON.stringify(message);
+  //   if (ws.readyState === WebSocket.OPEN) {
+  //     ws.send(messageString);
+  //     // console.log('🚀 Kirim data cache awal ke client:', messageString);
+  //   }
+  // } catch (error) {
+  //   console.error('Error sending initial cache to client:', error);
+  // }
+
+  broadcastLatestCacheData(); // <-- Panggil di sini juga
 
   ws.on('close', () => {
     clients.delete(ws);
