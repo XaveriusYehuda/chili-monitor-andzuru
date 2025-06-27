@@ -258,13 +258,16 @@ function broadcastLatestCacheData() {
   const latestPh = typeof phData[phData.length - 1]?.value === 'number' ? phData[phData.length - 1].value : null;
   const latestHumidity = typeof humidityData[humidityData.length - 1]?.value === 'number' ? humidityData[humidityData.length - 1].value : null;
 
+  // Gunakan waktu Jakarta (WIB, UTC+7)
+  const jakartaTime = new Date(Date.now() + (7 * 60 * 60 * 1000));
+
   const message = {
     topic: 'cacheUpdate', // Gunakan topik yang berbeda untuk update dari cache
     data: {
       Ph: latestPh,
       Kelembapan: latestHumidity
     },
-    timestamp: new Date().toISOString(),
+    timestamp: jakartaTime,
     chartData: {
       ph: extractChartData(phData),
       humidity: extractChartData(humidityData)

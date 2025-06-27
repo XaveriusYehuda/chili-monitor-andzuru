@@ -1,3 +1,5 @@
+import { openDb, saveHumidityDataToDb, savePhDataToDb, getHumidityDataFromDb, getPhDataFromDb } from './database.js';
+
 const mqttHost = 'a2spluztzgsdhl-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
 const region = 'ap-southeast-1'; // contoh: ap-southeast-1
 const identityPoolId = 'ap-southeast-1:e9f502ea-58c5-459a-bfa3-3ce6e1fc9bff'; // contoh: ap-southeast-1:xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx
@@ -141,7 +143,36 @@ const setupWebSocket = () => {
       const data = JSON.parse(event.data);
       console.log('📨 Data diterima:', data);
 
-      const { topic, data: sensorData, chartData } = data;
+      const { topic, data: sensorData, chartData, timestamp } = data;
+
+      phDataReceivedAt = chartData.ph.timestamps[chartData.ph.timestamps.length - 1];
+      humidityDataReceivedAt = chartData.humidity.timestamps[chartData.humidity.timestamps.length - 1];
+
+      const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000)); // Waktu data diterima browser (milidetik)
+
+      // Hitung selisih waktu
+      const latencyMs = browserReceivedTimestamp - Number(timestamp);
+
+      // Data yang akan disimpan ke IndexedDB
+      const recordHumidity = {
+        timestampCloudReceived: timestamp, // Konversi timestamp dari string ISO ke milidetik
+        timestampBrowserReceived: browserReceivedTimestamp,
+        latency: parseFloat(latencyMs), 
+        humidityValue: parseFloat(sensorData?.Kelembapan ?? null),
+        humidityDataReceivedAt: humidityDataReceivedAt,
+      };
+      
+      const recordPh = {
+        timestampCloudReceived: timestamp, // Konversi timestamp dari string ISO ke milidetik
+        timestampBrowserReceived: browserReceivedTimestamp,
+        latency: parseFloat(latencyMs),
+        phValue: parseFloat(sensorData?.Ph ?? null),
+        phDataReceivedAt: phDataReceivedAt,
+      };
+
+      // Simpan record ke IndexedDB
+      saveHumidityDataToDb(recordHumidity);
+      savePhDataToDb(recordPh);
 
       // Ambil nilai mentah Ph dan Kelembapan
       const phRaw = parseFloat(sensorData?.Ph ?? null);
@@ -167,31 +198,31 @@ const setupWebSocket = () => {
 
       if (phElement) phElement.textContent = fixPh;
       if (humidityElement) humidityElement.textContent = fixHumidity;
-
-      /// Update Chart Data jika tersedia
       if (chartData) {
-      const { ph, humidity } = chartData;
-
-      if (ph && Array.isArray(ph.timestamps) && Array.isArray(ph.values)) {
-        const phTimestamps = ph.timestamps.map(t => Number(t));
-        const phValues = ph.values.map(v => Number(v));
-
-        console.log('📊 pH timestamps:', phTimestamps);
-        console.log('📊 pH values:', phValues);
-
-        updateDataPh(phTimestamps, phValues);
+        setTimeout(updateDataPhFromDb(), 200);// Update grafik pH dari IndexedDB
+        setTimeout(updateDataHumidityFromDb(), 200); // Update grafik kelembapan
       }
 
-      if (humidity && Array.isArray(humidity.timestamps) && Array.isArray(humidity.values)) {
-        const humidityTimestamps = humidity.timestamps.map(t => Number(t));
-        const humidityValues = humidity.values.map(v => Number(v));
+      // Update Chart Data jika tersedia
+      // if (chartData) {
+        // const { ph, humidity } = chartData;
 
-        console.log('💧 Humidity timestamps:', humidityTimestamps);
-        console.log('💧 Humidity values:', humidityValues);
+        // if (ph && Array.isArray(ph.timestamps) && Array.isArray(ph.values)) {
+        //   const phTimestamps = ph.timestamps.map(t => Number(t));
+        //   const phValues = ph.values.map(v => Number(v));
 
-        updateDataHumidity(humidityTimestamps, humidityValues);
-      }
-    }
+        //   console.log('📊 pH timestamps:', phTimestamps);
+        //   console.log('📊 pH values:', phValues);
+        // }
+
+        // if (humidity && Array.isArray(humidity.timestamps) && Array.isArray(humidity.values)) {
+        //   const humidityTimestamps = humidity.timestamps.map(t => Number(t));
+        //   const humidityValues = humidity.values.map(v => Number(v));
+
+        //   console.log('💧 Humidity timestamps:', humidityTimestamps);
+        //   console.log('💧 Humidity values:', humidityValues);
+        // }
+      // }  
 
     } catch (error) {
       console.error('❌ Error parsing WebSocket message:', error);
@@ -215,29 +246,40 @@ const setupWebSocket = () => {
 document.addEventListener('DOMContentLoaded', () => {
   setupWebSocket();
   setupMQTT();
-  const phValue = document.getElementById('phValue');
-  const humidityValue = document.getElementById('humidityValue');
+
+  openDb().then(() => {
+  }).catch(err => console.error('Failed to open IndexedDB:', err));
 });
 
-function updateDataPh(phTimestamps, phValues) {
+// Update grafik pH menggunakan data dari array phFromDb
+async function updateDataPhFromDb() {
+  // Ambil data dari IndexedDB
+  const phFromDb = await getPhDataFromDb(20); // ambil 20 data terbaru (atau sesuai kebutuhan)
+  if (!phFromDb || phFromDb.length === 0) {
+    myChartPh.data.datasets[0].data = [];
+    myChartPh.data.labels = [];
+    myChartPh.update();
+    return;
+  }
 
-  function isoToCustomFormat(isoString) {
-    const date = new Date(isoString);
+  // Urutkan data dari lama ke baru (karena getPhDataFromDb mengembalikan data terbaru duluan)
+  const sorted = phFromDb.slice().reverse();
+
+  // Ambil label waktu dan nilai pH
+  const labels = sorted.map(item => {
+    const date = new Date(item.phDataReceivedAt);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
-
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  }
+  });
+  const values = sorted.map(item => item.phValue);
 
-  const fixTimePh = phTimestamps.map(time => isoToCustomFormat(time));
-  console.log(fixTimePh);
-
-  myChartPh.data.datasets[0].data = phValues;
-  myChartPh.data.labels = fixTimePh;
+  myChartPh.data.datasets[0].data = values;
+  myChartPh.data.labels = labels;
   myChartPh.update();
 }
 
@@ -273,26 +315,34 @@ const myChartPh = new Chart(
 );
 
 // Fetch data
-function updateDataHumidity(humidityTimestamps, humidityValues) {
+async function updateDataHumidityFromDb() {
+  const humidityFromDb = await getHumidityDataFromDb(20); // ambil 20 data terbaru (atau sesuai kebutuhan)
+  if (!humidityFromDb || humidityFromDb.length === 0) {   
+    myChartHumidity.data.datasets[0].data = [];
+    myChartHumidity.data.labels = [];
+    myChartHumidity.update();
+    return; 
+  }
 
-function isoToCustomFormat(isoString) {
-  const date = new Date(isoString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
+  // Urutkan data dari lama ke baru (karena getHumidityDataFromDb mengembalikan data terbaru duluan)
+  const sorted = humidityFromDb.slice().reverse();
+  
+  // Ambil label waktu dan nilai kelembapan
+  const labels = sorted.map(item => {
+    const date = new Date(item.humidityDataReceivedAt);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  });
+  const values = sorted.map(item => item.phValue);
 
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-}
-
-const fixTimeHumidity = humidityTimestamps.map(time => isoToCustomFormat(time));
-console.log(fixTimeHumidity);
-
-myChartHumidity.data.datasets[0].data = humidityValues;
-myChartHumidity.data.labels = fixTimeHumidity;
-myChartHumidity.update();
+  myChartHumidity.data.datasets[0].data = values;
+  myChartHumidity.data.labels = labels;
+  myChartHumidity.update();
 }
 
 const dataHumidity = {
