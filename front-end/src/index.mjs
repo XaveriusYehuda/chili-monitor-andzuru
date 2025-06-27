@@ -145,8 +145,8 @@ const setupWebSocket = () => {
 
       const { topic, data: sensorData, chartData, timestamp } = data;
 
-      phDataReceivedAt = chartData.ph.timestamps[chartData.ph.timestamps.length - 1];
-      humidityDataReceivedAt = chartData.humidity.timestamps[chartData.humidity.timestamps.length - 1];
+      const phDataReceivedAt = chartData.ph.timestamps[chartData.ph.timestamps.length - 1];
+      const humidityDataReceivedAt = chartData.humidity.timestamps[chartData.humidity.timestamps.length - 1];
 
       const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000)); // Waktu data diterima browser (milidetik)
 
