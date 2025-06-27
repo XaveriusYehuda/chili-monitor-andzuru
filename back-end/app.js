@@ -44,16 +44,19 @@ function addDataToCache(nilaiSensor, dataItem) {
   const normalizedTimestamp = normalizeTimestamp(dataItem.timestamp);
 
   // Filter: Cegah duplikasi data berdasarkan timestamp dan value
-  const isDuplicate = cache.some(item => item.timestamp === normalizedTimestamp && item.value === dataItem.value);
-  if (isDuplicate) {
-    // console.log(`⛔ Duplikat data (${nilaiSensor}) dengan timestamp ${normalizedTimestamp}, tidak disimpan.`);
-    return;
+  const existingIndex = cache.findIndex(item => item.timestamp === normalizedTimestamp);
+  if (existingIndex !== -1) {
+    // Jika ada, perbarui nilainya (atau bisa juga skip jika Anda ingin hanya data unik)
+    cache[existingIndex].value = dataItem.value;
+    console.log(`Mengupdate data di cache untuk ${nilaiSensor} pada timestamp ${new Date(normalizedTimestamp).toISOString()}`);
+  } else {
+    // Jika tidak ada, tambahkan data baru
+    cache.push({
+      timestamp: normalizedTimestamp,
+      value: dataItem.value
+    });
+    console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${dataItem.value}`);
   }
-
-  cache.push({
-    timestamp: normalizedTimestamp,
-    value: dataItem.value
-  });
 
   cache.sort((a, b) => a.timestamp - b.timestamp);
 
@@ -102,35 +105,52 @@ function connectAwsWebSocket() {
 
   wsExternal.on('message', (message) => {
     try {
-      // console.log('Pesan diterima dari server:', message.toString());
+      console.log('Pesan diterima dari server:', message.toString());
       const parsed = JSON.parse(message);
       if (parsed.action === 'initialData') {
-        // console.log('Received initial data:', parsed.data);
+        console.log('Received initial data:', parsed.data);
+        sensorDataCache.clear(); // Perbaikan: Hapus cache lama saat menerima initial data
 
-        Object.entries(parsed.data).forEach(([sensorType, dataArray]) => {
-          dataArray.forEach(item => {
-            const payload = item.payload;
-            const nilaiSensor = item.nilaiSensor;
-            const timestamp = item.time || (payload?.timestamp ?? Date.now());
+        // Object.entries(parsed.data).forEach(([sensorType, dataArray]) => {
+        //   dataArray.forEach(item => {
+        //     const payload = item.payload;
+        //     const nilaiSensor = item.nilaiSensor;
+        //     const timestamp = item.time || (payload?.timestamp ?? Date.now());
 
-            if (!payload || typeof payload !== 'object') {
-              console.warn('Payload tidak sesuai:', payload);
-              return;
-            }
+        //     if (!payload || typeof payload !== 'object') {
+        //       console.warn('Payload tidak sesuai:', payload);
+        //       return;
+        //     }
 
-            function extractSensorValue(payload) {
-              return payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null;
-            }
+        //     function extractSensorValue(payload) {
+        //       return payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null;
+        //     }
 
-            const simplifiedData = {
-              timestamp: timestamp,
-              value: extractSensorValue(payload)
-            };
+        //     const simplifiedData = {
+        //       timestamp: timestamp,
+        //       value: extractSensorValue(payload)
+        //     };
 
-            addDataToCache(nilaiSensor, simplifiedData);
-          });
+        //     addDataToCache(nilaiSensor, simplifiedData);
+        //   });
+        // });
+
+        parsed.data.forEach(item => { // Perbaikan: `parsed.data` seharusnya array langsung
+          const { nilaiSensor, payload, time } = item;
+          // Perbaikan: Pastikan payload dan nilaiSensor valid
+          if (!payload || typeof payload !== 'object' || !nilaiSensor) {
+            console.warn('Payload atau nilaiSensor tidak valid di initialData:', item);
+            return;
+          }
+
+          const simplifiedData = {
+            timestamp: time || payload.timestamp, // Gunakan `time` jika tersedia, atau `payload.timestamp`
+            value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
+          };
+          if (simplifiedData.value !== null) { // Hanya tambahkan jika nilai valid
+              addDataToCache(nilaiSensor, simplifiedData);
+          }
         });
-
         broadcastLatestCacheData();
 
         // Tampilkan isi cache
@@ -147,29 +167,51 @@ function connectAwsWebSocket() {
 
         const sensorPayload = parsed.data;
         // Jika `parsed.data` adalah array → forEach
-        if (Array.isArray(sensorPayload)) {
-          sensorPayload.forEach((item) => {
-            const { nilaiSensor, payload, time } = item;
 
-            const simplifiedData = {
-              timestamp: payload.timestamp,
-              value: payload.Ph ?? payload.Kelembapan,
-            };
 
-            addDataToCache(nilaiSensor, simplifiedData);
-          });
-        } else if (typeof sensorPayload === 'object') {
-          // Jika `parsed.data` adalah objek tunggal
-          const { nilaiSensor, payload, time } = sensorPayload;
+        // if (Array.isArray(sensorPayload)) {
+        //   sensorPayload.forEach((item) => {
+        //     const { nilaiSensor, payload, time } = item;
+
+        //     const simplifiedData = {
+        //       timestamp: payload.timestamp,
+        //       value: payload.Ph ?? payload.Kelembapan,
+        //     };
+
+        //     addDataToCache(nilaiSensor, simplifiedData);
+        //   });
+        // } else if (typeof sensorPayload === 'object') {
+        //   // Jika `parsed.data` adalah objek tunggal
+        //   const { nilaiSensor, payload, time } = sensorPayload;
+
+        //   const simplifiedData = {
+        //     timestamp: payload.timestamp,
+        //     value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
+        //   };
+
+        //   addDataToCache(nilaiSensor, simplifiedData);
+        // };
+
+        // Perbaikan: Selalu asumsikan `sensorPayload` adalah array atau tangani objek tunggal secara eksplisit
+        const itemsToProcess = Array.isArray(sensorPayload) ? sensorPayload : [sensorPayload];
+
+        itemsToProcess.forEach((item) => {
+          const { nilaiSensor, payload, time } = item; // `time` juga bisa ada di `dataUpdate`
+
+          if (!payload || typeof payload !== 'object' || !nilaiSensor) {
+            console.warn('Payload atau nilaiSensor tidak valid di dataUpdate:', item);
+            return;
+          }
 
           const simplifiedData = {
-            timestamp: payload.timestamp,
+            timestamp: time || payload.timestamp, // Gunakan `time` jika tersedia, atau `payload.timestamp`
             value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
           };
 
-          addDataToCache(nilaiSensor, simplifiedData);
-        };
-
+          if (simplifiedData.value !== null) { // Hanya tambahkan jika nilai valid
+              addDataToCache(nilaiSensor, simplifiedData);
+          }
+        });
         broadcastLatestCacheData();
         // Tampilkan isi cache
         // console.log('Isi sensorDataCache:');
@@ -245,8 +287,8 @@ mqttService.setMessageHandler((topic, payload) => {
   try {
     const phKey = 'device/ph';
     const humidityKey = 'device/humidity';
-    const phData = sensorDataCache.get(phKey) || [];
-    const humidityData = sensorDataCache.get(humidityKey) || [];
+    // const phData = sensorDataCache.get(phKey) || [];
+    // const humidityData = sensorDataCache.get(humidityKey) || [];
 
     const rawPayload = JSON.parse(payload.toString());
 
@@ -267,30 +309,48 @@ mqttService.setMessageHandler((topic, payload) => {
     const normalizedData = normalizePayload(rawPayload);
     // console.log('Data diterma dari MQTT: ', normalizedData);
 
-    const message = {
-      topic,
-      data: {
-        Ph: (topic === phKey) ? (normalizedData.Ph ?? normalizedData.ph ?? null) : (phData[phData.length - 1]?.value ?? null),
-        Kelembapan: (topic === humidityKey) ? (normalizedData.Kelembapan ?? normalizedData.kelembapan ?? null) : (humidityData[humidityData.length - 1]?.value ?? null)
-      },
-      timestamp: new Date().toISOString(),
-      chartData: {
-        ph: extractChartData(phData),
-        humidity: extractChartData(humidityData)
-      }
-    };
+    // Perbaikan Penting: Tambahkan data MQTT ke cache juga!
+    let sensorTypeFromTopic = '';
+    let sensorValue = null;
+    let timestamp = normalizedData.timestamp || Date.now(); // Gunakan timestamp dari payload jika ada, jika tidak, Date.now()
 
+    if (topic === phKey) {
+        sensorTypeFromTopic = phKey;
+        sensorValue = normalizedData.Ph ?? normalizedData.ph;
+    } else if (topic === humidityKey) {
+        sensorTypeFromTopic = humidityKey;
+        sensorValue = normalizedData.Kelembapan ?? normalizedData.kelembapan;
+    }
 
+    if (sensorTypeFromTopic && sensorValue !== null && sensorValue !== undefined) {
+        addDataToCache(sensorTypeFromTopic, { timestamp: timestamp, value: sensorValue });
+    }
 
-    // console.log('👋 Ini adalah pesan yang siap dikirim :', message);
+    // Setelah menambahkan data MQTT ke cache, baru broadcast dari cache
+    broadcastLatestCacheData();
 
-    const messageString = JSON.stringify(message);
-    clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(messageString);
-        // console.log('🚀 OTW KIRIM :', messageString);
-      }
-    });
+    // const message = {
+    //   topic,
+    //   data: {
+    //     Ph: (topic === phKey) ? (normalizedData.Ph ?? normalizedData.ph ?? null) : (phData[phData.length - 1]?.value ?? null),
+    //     Kelembapan: (topic === humidityKey) ? (normalizedData.Kelembapan ?? normalizedData.kelembapan ?? null) : (humidityData[humidityData.length - 1]?.value ?? null)
+    //   },
+    //   timestamp: new Date().toISOString(),
+    //   chartData: {
+    //     ph: extractChartData(phData),
+    //     humidity: extractChartData(humidityData)
+    //   }
+    // };
+
+    // // console.log('👋 Ini adalah pesan yang siap dikirim :', message);
+
+    // const messageString = JSON.stringify(message);
+    // clients.forEach(client => {
+    //   if (client.readyState === WebSocket.OPEN) {
+    //     client.send(messageString);
+    //     // console.log('🚀 OTW KIRIM :', messageString);
+    //   }
+    // });
   } catch (error) {
     console.error('Error broadcasting MQTT message:', error);
   }
