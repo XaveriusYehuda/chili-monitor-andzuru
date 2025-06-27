@@ -24,18 +24,18 @@ export function openDb() {
 		request.onupgradeneeded = (event) => {
 			const db = event.target.result;
 			// Buat object store untuk pH
-			if (!db.objectStoreNames.contains('STORE_NAME_2')) {
-				const phStore = db.createObjectStore('STORE_NAME_2', { keyPath: 'id', autoIncrement: true });
+			if (!db.objectStoreNames.contains(STORE_NAME_2)) {
+				const phStore = db.createObjectStore(STORE_NAME_2, { keyPath: 'id', autoIncrement: true });
 				phStore.createIndex('timestampCloudReceived', 'timestampCloudReceived', { unique: false });
 				phStore.createIndex('timestampBrowserReceived', 'timestampBrowserReceived', { unique: false });
-				console.log(`Object store 'phUpdates' created.`);
+				console.log(`Object store '${STORE_NAME_2}' created.`);
 			}
 			// Buat object store untuk kelembapan
-			if (!db.objectStoreNames.contains('STORE_NAME_1')) {
-				const humidityStore = db.createObjectStore('STORE_NAME_1', { keyPath: 'id', autoIncrement: true });
+			if (!db.objectStoreNames.contains(STORE_NAME_1)) {
+				const humidityStore = db.createObjectStore(STORE_NAME_1, { keyPath: 'id', autoIncrement: true });
 				humidityStore.createIndex('timestampCloudReceived', 'timestampCloudReceived', { unique: false });
 				humidityStore.createIndex('timestampBrowserReceived', 'timestampBrowserReceived', { unique: false });
-				console.log(`Object store 'humidityUpdates' created.`);
+				console.log(`Object store '${STORE_NAME_1}' created.`);
 			}
 		};
 	});
@@ -48,8 +48,8 @@ export function savePhDataToDb(data) {
 	console.warn('IndexedDB not open. Cannot save pH data.');
 	return;
   }
-  const transaction = db.transaction(['STORE_NAME_2'], 'readwrite');
-  const objectStore = transaction.objectStore('STORE_NAME_2');
+  const transaction = db.transaction([STORE_NAME_2], 'readwrite');
+  const objectStore = transaction.objectStore(STORE_NAME_2);
   const request = objectStore.add(data);
   request.onsuccess = () => {
 	// console.log('pH data saved to IndexedDB:', data);
@@ -65,8 +65,8 @@ export function saveHumidityDataToDb(data) {
 	console.warn('IndexedDB not open. Cannot save humidity data.');
 	return;
   }
-  const transaction = db.transaction(['STORE_NAME_1'], 'readwrite');
-  const objectStore = transaction.objectStore('STORE_NAME_1');
+  const transaction = db.transaction([STORE_NAME_1], 'readwrite');
+  const objectStore = transaction.objectStore(STORE_NAME_1);
   const request = objectStore.add(data);
   request.onsuccess = () => {
 	// console.log('Humidity data saved to IndexedDB:', data);
@@ -75,7 +75,6 @@ export function saveHumidityDataToDb(data) {
 	console.error('Error saving humidity data to IndexedDB:', event.target.errorCode);
   };
 }
-
 
 // Fungsi untuk membaca semua data dari IndexedDB (opsional, jika Anda ingin menampilkan history)
 export function getHumidityDataFromDb(limit = 10) {
@@ -107,6 +106,7 @@ export function getHumidityDataFromDb(limit = 10) {
 	};
   });
 }
+
 export function getPhDataFromDb(limit = 10) {
   return new Promise((resolve, reject) => {
 	if (!db) {
@@ -137,6 +137,7 @@ export function getPhDataFromDb(limit = 10) {
   });
 }
 
+// Tidak dipakai
 // Fungsi untuk menghapus data lama dari IndexedDB (opsional, untuk menjaga ukuran DB)
 export function cleanOldDataFromDb(maxEntries = 100) {
 	return new Promise((resolve, reject) => {
