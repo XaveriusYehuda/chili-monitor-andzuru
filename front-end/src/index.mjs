@@ -190,14 +190,21 @@ const setupWebSocket = () => {
         humidityValue: parseFloat(sensorData?.Kelembapan ?? null),
         humidityDataReceivedAt: humidityDataReceivedAtFix,
       };
-      
-      const recordPh = {
-        timestampCloudReceived: timestamp, 
-        timestampBrowserReceived: browserReceivedTimestampFix,
-        latency: parseFloat(latencyMs),
-        phValue: parseFloat(sensorData?.Ph ?? null),
-        phDataReceivedAt: phDataReceivedAtFix,
-      };
+
+      //  Kode ini dikhususkan pada nilai PH karena nilai PH jarang diganti.
+      let recordPh = null; // Inisialisasi recordPh sebagai null
+      if (sensorData?.Ph === undefined || sensorData?.Ph === null) {
+        console.log('PH tidak ada pembaharuan data');
+      } else if (sensorData?.Ph !== undefined && sensorData?.Ph !== null) {
+        // Jika Ph ada, buat record Ph
+        recordPh = {
+          timestampCloudReceived: timestamp, 
+          timestampBrowserReceived: browserReceivedTimestampFix,
+          latency: parseFloat(latencyMs),
+          phValue: parseFloat(sensorData.Ph),
+          phDataReceivedAt: phDataReceivedAtFix,
+        };
+      }
 
       // Simpan record ke IndexedDB
       saveHumidityDataToDb(recordHumidity);
