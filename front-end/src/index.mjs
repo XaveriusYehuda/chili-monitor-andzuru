@@ -144,12 +144,13 @@ const setupWebSocket = () => {
       const { topic, data: sensorData, chartData } = data;
 
       // Ambil nilai mentah Ph dan Kelembapan
-      const phRaw = sensorData?.Ph ?? null;
-      const humidityRaw = sensorData?.Kelembapan ?? null;
+      const phRaw = parseFloat(sensorData?.Ph ?? null);
+      const humidityRaw = parseFloat(sensorData?.Kelembapan ?? null);
 
       // Update tampilan nilai Ph dan Kelembapan
-      const fixPh = typeof phRaw === 'number' ? phRaw.toFixed(2) : 'N/A';
-      const fixHumidity = typeof humidityRaw === 'number' ? humidityRaw.toFixed(2) : 'N/A';
+      // `toFixed(2)` hanya bisa dipanggil pada angka, jadi cek `isNaN` juga
+      const fixPh = !isNaN(phRaw) && typeof phRaw === 'number' ? phRaw.toFixed(2) : 'N/A';
+      const fixHumidity = !isNaN(humidityRaw) && typeof humidityRaw === 'number' ? humidityRaw.toFixed(2) : 'N/A';
 
       const phElement = document.getElementById('phValue');
       const humidityElement = document.getElementById('humidityValue');

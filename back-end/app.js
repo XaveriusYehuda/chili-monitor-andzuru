@@ -35,6 +35,12 @@ function addDataToCache(nilaiSensor, dataItem) {
     return;
   }
 
+  const normalizedValue = parseFloat(dataItem.value); // Tambahkan konversi eksplisit ke float di sini
+  if (isNaN(normalizedValue)) {
+      console.warn(`Data nilai sensor tidak bisa dikonversi ke angka (${nilaiSensor}), tidak disimpan:`, dataItem);
+      return;
+  }
+
   if (!sensorDataCache.has(nilaiSensor)) {
     sensorDataCache.set(nilaiSensor, []);
   }
@@ -47,13 +53,13 @@ function addDataToCache(nilaiSensor, dataItem) {
   const existingIndex = cache.findIndex(item => item.timestamp === normalizedTimestamp);
   if (existingIndex !== -1) {
     // Jika ada, perbarui nilainya (atau bisa juga skip jika Anda ingin hanya data unik)
-    cache[existingIndex].value = dataItem.value;
+    cache[existingIndex].value = normalizedValue;
     console.log(`Mengupdate data di cache untuk ${nilaiSensor} pada timestamp ${new Date(normalizedTimestamp).toISOString()}`);
   } else {
     // Jika tidak ada, tambahkan data baru
     cache.push({
       timestamp: normalizedTimestamp,
-      value: dataItem.value
+      value: normalizedValue
     });
     console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${dataItem.value}`);
   }
@@ -145,9 +151,9 @@ function connectAwsWebSocket() {
 
           const simplifiedData = {
             timestamp: time || payload.timestamp, // Gunakan `time` jika tersedia, atau `payload.timestamp`
-            value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
+            value: parseFloat(payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null),
           };
-          if (simplifiedData.value !== null) { // Hanya tambahkan jika nilai valid
+          if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
               addDataToCache(nilaiSensor, simplifiedData);
           }
         });
@@ -205,10 +211,10 @@ function connectAwsWebSocket() {
 
           const simplifiedData = {
             timestamp: time || payload.timestamp, // Gunakan `time` jika tersedia, atau `payload.timestamp`
-            value: payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null,
+            value: parseFloat(payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null),
           };
 
-          if (simplifiedData.value !== null) { // Hanya tambahkan jika nilai valid
+          if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
               addDataToCache(nilaiSensor, simplifiedData);
           }
         });
@@ -249,8 +255,8 @@ function broadcastLatestCacheData() {
   const phData = sensorDataCache.get('device/ph') || [];
   const humidityData = sensorDataCache.get('device/humidity') || [];
 
-  const latestPh = phData[phData.length - 1]?.value ?? null;
-  const latestHumidity = humidityData[humidityData.length - 1]?.value ?? null;
+  const latestPh = typeof phData[phData.length - 1]?.value === 'number' ? phData[phData.length - 1].value : null;
+  const latestHumidity = typeof humidityData[humidityData.length - 1]?.value === 'number' ? humidityData[humidityData.length - 1].value : null;
 
   const message = {
     topic: 'cacheUpdate', // Gunakan topik yang berbeda untuk update dari cache
@@ -316,13 +322,13 @@ mqttService.setMessageHandler((topic, payload) => {
 
     if (topic === phKey) {
         sensorTypeFromTopic = phKey;
-        sensorValue = normalizedData.Ph ?? normalizedData.ph;
+        sensorValue = parseFloat(normalizedData.Ph ?? normalizedData.ph);
     } else if (topic === humidityKey) {
         sensorTypeFromTopic = humidityKey;
-        sensorValue = normalizedData.Kelembapan ?? normalizedData.kelembapan;
+        sensorValue = parseFloat(normalizedData.Kelembapan ?? normalizedData.kelembapan);
     }
 
-    if (sensorTypeFromTopic && sensorValue !== null && sensorValue !== undefined) {
+    if (sensorTypeFromTopic && !isNaN(sensorValue) && sensorValue !== null && sensorValue !== undefined) {
         addDataToCache(sensorTypeFromTopic, { timestamp: timestamp, value: sensorValue });
     }
 
