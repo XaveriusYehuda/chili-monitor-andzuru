@@ -147,13 +147,13 @@ const setupWebSocket = () => {
       const { ph, humidity } = chartData;
 
       let phDataReceivedAtFix;
-      if (ph && Array.isArray(ph.timestamps) && ph.timestamps.length > 0) {
+      if (ph && Array.isArray(ph.timestamps)) {
         const phDataReceivedAt = ph.timestamps[ph.timestamps.length - 1];
         phDataReceivedAtFix = typeof phDataReceivedAt === 'string' ? new Date(phDataReceivedAt).toISOString() : phDataReceivedAt;
       } phDataReceivedAtFix = null;
 
       let humidityDataReceivedAtFix;
-      if (humidity && Array.isArray(humidity.timestamps) && humidity.timestamps.length > 0) {
+      if (humidity && Array.isArray(humidity.timestamps)) {
         const humidityDataReceivedAt = humidity.timestamps[humidity.timestamps.length - 1];
         humidityDataReceivedAtFix =  typeof humidityDataReceivedAt === 'string' ? new Date(humidityDataReceivedAt).toISOString() : humidityDataReceivedAt;
       } humidityDataReceivedAtFix = null;

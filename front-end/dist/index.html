@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/assets/fix4-Dfy00kkw.png" sizes="32x32" type="image/png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1481.0.min.js"></script>
+  <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <title>An-Dzuru Monitor</title>
+  <script type="module" crossorigin src="/assets/index-Ixn4tEYo.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-0Q1bvHRR.css">
+</head>
+<body>
+  <!-- Hero Section Section Start -->
+  <section id="home">
+    <div class="@container">
+      <div class="max-w-full self-center">
+        <div class="relative overflow-hidden h-[400px] lg:h-[600px] pixxy:h-[60vh]">
+          <div class="absolute z-0 bottom-5 w-[120vw] 2xl:w-[210vw] h-[120vh] lg:bottom-15 left-1/2 transform 2xl:translate-y-10  gipsy:translate-y-15 -translate-x-1/2 md:w-[200vw] md:h-[200vw] bg-secondary rounded-full"></div>
+          <div class="relative z-30 top-5 items-center flex flex-wrap justify-between lg:justify-center lg:bg-secondary/25 lg:backdrop-blur-sm lg:fixed lg:w-7/8 lg:top-10 lg:left-1/2 lg:transform lg:-translate-x-1/2 lg:border-4 lg:border-primary lg:rounded-full lg:py-2 lg:px-6">
+            <div class="pl-4 lg:w-1/2">
+              <a href="#" class="block lg:inline px-2 text-xl text-primary font-inter font-extrabold md:text-2xl">An-Dzuru</a>
+            </div>
+            <div class="px-4 hidden lg:flex lg:w-1/2 lg:justify-evenly">
+              <div class="hidden lg:flex mx-4 py-2 text-base text-primary hover:text-tersier md:text-lg lg:text-xl">
+                <a href="#home">About Us</a>
+              </div>
+              <div class="hidden lg:flex mx-4 py-2 text-base text-primary hover:text-tersier md:text-lg lg:text-xl">
+                <a href="#dashboard">Dashboard</a>
+              </div>
+            </div>
+            <button id="hamburger" name="hamburger" type="button" class="absolute right-6 block lg:hidden">
+              <span class="my-2 block h-[2px] w-[30px] bg-primary origin-top-left transition duration-300 ease-in-out"></span>
+              <span class="my-2 block h-[2px] w-[30px] bg-primary transition duration-300 ease-in-out"></span>
+              <span class="my-2 block h-[2px] w-[30px] bg-primary origin-bottom-left transition duration-300 ease-in-out"></span>
+            </button>
+          </div>
+          <img src="data:image/svg+xml,%3c?xml%20version='1.0'%20encoding='UTF-8'?%3e%3csvg%20xmlns='http://www.w3.org/2000/svg'%20xmlns:xlink='http://www.w3.org/1999/xlink'%20width='190px'%20height='190px'%20viewBox='0%200%20190%20190'%20version='1.1'%3e%3cg%20id='surface1'%3e%3cpath%20style='%20stroke:none;fill-rule:nonzero;fill:rgb(63.137257%25,89.019608%25,97.647059%25);fill-opacity:1;'%20d='M%20140.21875%2055.574219%20C%20151.425781%2060.898438%20156.558594%2077.898438%20158.933594%2097.375%20C%20161.214844%20116.757812%20160.742188%20138.414062%20149.53125%20152%20C%20138.414062%20165.492188%20116.757812%20170.808594%2098.515625%20167.292969%20C%2080.273438%20163.78125%2065.550781%20151.523438%2050.066406%20137.941406%20C%2034.582031%20124.449219%2018.242188%20109.726562%2017.859375%2094.617188%20C%2017.382812%2079.417969%2032.867188%2063.839844%2048.351562%2058.617188%20C%2063.839844%2053.292969%2079.417969%2058.332031%2095.757812%2057.574219%20C%20112.101562%2056.808594%20129.101562%2050.351562%20140.21875%2055.574219%20Z%20M%20140.21875%2055.574219%20'/%3e%3c/g%3e%3c/svg%3e" class="absolute scale-95 md:scale-180 lg:scale-260 z-20 rotate-z-30 -left-13 md:left-0 lg:left-14 lg:top-10">
+          <img src="data:image/svg+xml,%3c?xml%20version='1.0'%20encoding='UTF-8'?%3e%3csvg%20xmlns='http://www.w3.org/2000/svg'%20xmlns:xlink='http://www.w3.org/1999/xlink'%20width='190px'%20height='190px'%20viewBox='0%200%20190%20190'%20version='1.1'%3e%3cg%20id='surface1'%3e%3cpath%20style='%20stroke:none;fill-rule:nonzero;fill:rgb(63.137257%25,89.019608%25,97.647059%25);fill-opacity:1;'%20d='M%20140.21875%2055.574219%20C%20151.425781%2060.898438%20156.558594%2077.898438%20158.933594%2097.375%20C%20161.214844%20116.757812%20160.742188%20138.414062%20149.53125%20152%20C%20138.414062%20165.492188%20116.757812%20170.808594%2098.515625%20167.292969%20C%2080.273438%20163.78125%2065.550781%20151.523438%2050.066406%20137.941406%20C%2034.582031%20124.449219%2018.242188%20109.726562%2017.859375%2094.617188%20C%2017.382812%2079.417969%2032.867188%2063.839844%2048.351562%2058.617188%20C%2063.839844%2053.292969%2079.417969%2058.332031%2095.757812%2057.574219%20C%20112.101562%2056.808594%20129.101562%2050.351562%20140.21875%2055.574219%20Z%20M%20140.21875%2055.574219%20'/%3e%3c/g%3e%3c/svg%3e" class="absolute scale-140 md:scale-240 lg:scale-330 2xl:scale-400 z-20 -rotate-z-40 -right-8 -top-10 md:-right-4 md:-top-5 lg:top-0">
+          <nav id="nav-menu" class="absolute right-8 top-15 hidden w-full max-w-[180px] rounded-lg bg-secondary py-2 z-[50] shadow-lg border-2 border-primary">
+            <ul class="block">
+              <li class="group">
+                <a href="#home" class="mx-4 flex py-2 text-base text-primary group-hover:text-tersier md:text-lg">About Us</a>
+              </li>
+              <li class="group">
+                <a href="#dashboard" class="mx-4 flex py-2 text-base text-primary group-hover:text-tersier md:text-lg">Dashboard</a>
+              </li>
+            </ul>
+          </nav>
+          <div class="flex absolute z-20 flex-wrap w-full left-1/2 transform -translate-x-1/2 items-center top-25 lg:top-40 px-4 justify-center self-center">
+            <h1 class="text-4xl justify-self-center mx-8 font-extrabold text-primary md:w-full md:text-center md:text-6xl md:mb-2 lg:text-8xl 2xl:text-9xl">
+              An-Dzuru
+            </h1>
+            <h2 class="text-base tracking-widest font-medium pb-4 mx-auto text-primary md:w-full md:text-center md:text-lg lg:text-3xl 2xl:text-4xl 2xl:mt-2 2xl:mb-6">
+              Quick Data, Huge Impact
+            </h2>
+            <p class="flex text-sm font-normal py-2 mx-auto text-primary text-center md:text-base lg:text-xl lg:tracking-widest lg:mt-4 2xl:text-3xl">
+              Monitor and control your soil quality <br>
+              with real-time information services, data history graphs, <br>
+              watering automation settings, and other regulatory features <br>
+              to help chili farmers increase yields. <br>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- Hero Section Section End -->
+
+  <!-- Dashboard Section Start -->
+  <section id="dashboard">
+    <div class="@container lg:max-h-[600px] xl:max-h-[800px]">
+      <div class="grid grid-colspan-1 ml-3 md:ml-6 my-8 lg:grid-cols-5 lg:grid-flow-row lg:grid-rows-3 lg:gap-3 2xl:items-stretch 2xl:mb-24">
+        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-2 shadow-tersier rounded-[40px] h-[120px] justify-center content-center 2xl:h-8/10">
+          <div class="flex flex-nowrap lg:flex-wrap justify-center items-center self-center lg:mx-2 mx-5 2xl:h-full">
+            <h3 class="text-2xl flex-1/2 text-primary lg:order-2 2xl:order-1 2xl:text-2xl lg:w-full lg:text-lg font-semibold text-center md:text-3xl">
+              Soil Moisture
+            </h3>
+            <h1 class="text-7xl md:text-8xl lg:w-full lg:order-1 2xl:order-2 2xl:text-7xl flex-1/2 lg:text-6xl font-bold text-primary text-center flex-nowrap">
+              <span id="humidityValue">60</span><span class="font-bold text-6xl 2xl:text-5xl md:text-7xl lg:text-4xl text-primary text-center items-center mx-0.5">%</span>
+            </h1>
+          </div>
+        </div>
+        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-3 shadow-tersier rounded-[40px] h-[120px] justify-center content-center 2xl:h-8/10">
+          <div class="flex flex-nowrap lg:flex-wrap justify-center items-center self-center mx-5">
+            <h3 class="text-2xl flex-1/2 text-primary lg:order-2 2xl:text-2xl lg:text-lg font-semibold 2xl:order-1 text-center md:text-3xl">
+              Soil PH Level
+            </h3>
+            <h1 id="phValue" class="text-7xl md:text-8xl flex-1/2 lg:order-1 2xl:text-7xl 2xl:order-2 lg:text-6xl font-bold text-primary text-center flex-nowrap">
+              6.5
+            </h1>
+          </div>
+        </div>
+        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-4 lg:col-span-2 shadow-tersier rounded-[40px] h-[120px] justify-center content-center 2xl:h-8/10">
+          <div class="flex flex-wrap justify-center items-center self-center mx-5">
+            <h1 class="text-5xl md:text-6xl lg:text-5xl 2xl:text-7xl w-full text-primary font-bold text-center">
+              <span id="countdownHour">1</span><span class="text-primary font-bold text-center text-4xl md:text-5xl">hr </span><span id="countdownMinute">23</span><span class="text-primary font-bold text-center text-4xl md:text-5xl">m </span><span id="countdownSecond">5</span><span class="text-primary font-bold text-center text-4xl md:text-5xl">s</span>
+            </h1>
+            <h3 class="text-2xl md:text-3xl 2xl:text-3xl 2xl:mt-2 lg:text-lg w-full font-semibold text-primary text-center">
+              Next Watering In
+            </h3>
+          </div>
+        </div>
+        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:justify-items-stretch lg:order-5 lg:row-span-2 mb-8 lg:col-span-2 shadow-tersier rounded-[40px] px-6 py-6 content-center">
+          <canvas id="myChart" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
+        </div>
+        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-6 lg:row-span-2 lg:col-span-2 shadow-tersier rounded-[40px] px-6 py-6 content-center">
+          <canvas id="myChart1" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
+        </div>
+        <div class="w-[93%] inline-flex bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:order-1 lg:row-span-3 mb-8 lg:items-center shadow-tersier rounded-[40px] content-center">
+          <div class="flex flex-wrap mx-5 lg:mx-2 items-center justify-center">
+            <h1 id="clock" class="text-4xl md:text-5xl font-extrabold text-primary text-center w-full py-2 my-4 lg:my-4 px-4 lg:px-0 lg:text-3xl xl:text-4xl">
+              23 : 23 : 14
+            </h1>
+            <!-- Garis -->
+            <div class="border-primary border-2 lg:border-[1px] 2xl:border-2 lg:mx-2 w-full lg:w-[80%]"></div>
+
+            <!-- Tombol -->
+            <button id="flushButton" onclick="nyalakanPompa()"
+              class="block w-full lg:w-[80%] bg-primary 2xl:text-4xl justify-center active:bg-white active:text-secondary items-center rounded-full lg:rounded-[40px] mt-8 mb-4 lg:mt-8 lg:mx-2 lg:mb-6 mx-0 lg:h-30 text-white text-3xl lg:text-2xl md:text-4xl font-extrabold text-center px-4 py-2 hover:text-primary hover:bg-tersier">
+              Flush
+            </button>
+            <p id="ground-good-status" class="text-primary font-semibold text-2xl  2xl:text-3xl md:text-3xl lg:text-lg/5 text-center mt-2 mb-8 mx-2 lg:mx-0">
+              Based on our calculation, <br>
+              your ground is in <br>
+              <span class="font-bold text-4xl lg:text-2xl md:text-5xl 2xl:text-6xl text-primary">GOOD<br></span>
+              condition
+            </p>
+            <p id="ground-poor-status" class="hidden text-red-400 font-semibold text-2xl  2xl:text-3xl md:text-3xl lg:text-lg/5 text-center mt-2 mb-8 mx-2 lg:mx-0">
+              Based on our calculation, <br>
+              your ground is in <br>
+              <span class="font-bold text-4xl lg:text-2xl md:text-5xl 2xl:text-6xl text-red-500">POOR<br></span>
+              condition
+            </p>
+            <button id="info-button" class="justify-self-end bg-primary hover:bg-tersier active:bg-white active:text-secondary hover:text-primary hover:bg-tersier text-white px-8 mb-10 cursor-pointer rounded-[40px] font-bold text-lg">
+              Info
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- Dashboard Section End -->
+
+  <!-- Footer Section Start -->
+  <footer id="footer" class="py-4 bg-primary 2xl:bottom-0">
+    <div class="@container">
+      <div class="mx-8 my-4">
+        <div class="justify-items-center">
+          <h1 class="text-4xl md:text-5xl  2xl:text-6xl font-extrabold text-white text-center mx-4 mt-12">
+            An-Dzuru
+          </h1>
+          <h2 class="text-base md:text-lg  2xl:text-2xl tracking-widest text-center 2xl:mt-2 font-medium mb-4 mx-4 text-white">
+            Quick Data, Huge Impact
+          </h2>
+          <p class="text-sm font-normal md:text-base 2xl:text-2xl tracking-widest text-tersier text-center my-8 mx-20">
+            Desa Kentengsari,
+            Temanggung, Jawa Tengah
+          </p>
+          <div class="border-white border-[1px] h-0 w-full"></div>
+          <p class="text-sm md:text-base font-normal tracking-widest text-tersier text-center 2xl:text-2xl mt-8 mb-12">
+            &copy; Copyright by Politeknik Negeri Semarang
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <!-- Footer Section End -->
+
+  <section id="modal-container-1" class="fixed hidden z-[1000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-900 opacity-85"></section>
+  <section id="modal-container-2" class="fixed hidden z-[2000] left-0 top-0 w-full h-full overflow-auto">
+    <div class="flex justify-center items-start min-h-screen py-10">
+      <div id="modal-main" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-10 pr-10 pb-6 w-[70vw] max-w-[90vw] opacity-100">
+        <h2 class="text-3xl font-bold text-primary my-6">How to use these systems?</h2>
+        <div>
+          <p class="text-lg/8 text-primary">This system is designed to assist chili farmers in monitoring soil conditions and managing watering automatically. Here are the steps to use it:</p>
+        </div>
+        <div>
+          <ol class="list-decimal list-outside pl-4 text-lg/8 text-primary mb-4">
+            <li>Make sure the IoT device is well connected to the internet network.</li>
+            <li>Check the soil moisture and pH values displayed on the dashboard.</li>
+            <li>If the soil moisture is below the set threshold, press the “Flush” button to activate the watering pump.</li>
+            <li>Monitor historical data graphs to see trends in soil moisture and pH over time.</li>
+            <li>Use this information to make informed decisions in the management of your chili fields.</li>
+          </ol>
+        </div>
+        <div class="mt-6">
+          <h4 class="text-xl/8 font-bold text-primary">Irrigation</h4>
+          <p class="text-lg/8 text-primary mb-4 text-wrap">Press FLUSH to turn on the watering pump for 30 seconds.</p>
+        </div>
+        <div class="mt-6">
+          <h4 class="text-xl/8 font-bold text-primary">Data Graph</h4>
+          <p class="text-lg/8 text-primary mb-4 text-wrap">Data will be updated in real-time. Users are able to view data history for the previous 20 time periods.</p>
+        </div>
+        <div class="mt-6 mb-6">
+          <h4 class="text-xl/8 font-bold text-primary">Ground Status</h4>
+          <p class="text-lg/8 text-primary mb-4 text-wrap">The soil status will turn red and have <strong>POOR</strong> status only if the moisture value is less than 15% or more than 85% and if the pH value is less than 5.5 or more than 8.5. Otherwise, the soil status will turn green and have a <strong>GOOD</strong> status.</p>
+          <button id="close-modal" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>
