@@ -43,6 +43,13 @@ function addDataToCache(nilaiSensor, dataItem) {
 
   const normalizedTimestamp = normalizeTimestamp(dataItem.timestamp);
 
+  // Filter: Cegah duplikasi data berdasarkan timestamp dan value
+  const isDuplicate = cache.some(item => item.timestamp === normalizedTimestamp && item.value === dataItem.value);
+  if (isDuplicate) {
+    // console.log(`⛔ Duplikat data (${nilaiSensor}) dengan timestamp ${normalizedTimestamp}, tidak disimpan.`);
+    return;
+  }
+
   cache.push({
     timestamp: normalizedTimestamp,
     value: dataItem.value

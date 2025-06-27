@@ -335,7 +335,7 @@ Hamburger.addEventListener('click', function () {
 //klik di luar hamburger
 window.addEventListener('click', function (e) {
   if (e.target != Hamburger && e.target != navMenu) {
-    hamburger.classList.remove('hamburger-active');
+    Hamburger.classList.remove('hamburger-active');
     navMenu.classList.add('hidden');
   }
 });
@@ -403,5 +403,5 @@ function updateClock() {
   // Panggil fungsi updateClock setiap detik (1000 milidetik)
 setInterval(updateClock, 1000);
 
-// Panggil updateClock sekali saat halaman dimuat untuk menampilkan waktu awal
+ // Panggil updateClock sekali saat halaman dimuat untuk menampilkan waktu awal
 updateClock();
