@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Update grafik pH menggunakan data dari array phFromDb
 async function updateDataPhFromDb() {
   // Ambil data dari IndexedDB
-  const phFromDb = await getPhDataFromDb(20); // ambil 20 data terbaru (atau sesuai kebutuhan)
+  const phFromDb = await getPhDataFromDb(); // ambil 20 data terbaru (atau sesuai kebutuhan)
   if (!phFromDb || phFromDb.length === 0) {
     myChartPh.data.datasets[0].data = [];
     myChartPh.data.labels = [];
@@ -376,7 +376,7 @@ const myChartPh = new Chart(
 
 // Fetch data
 async function updateDataHumidityFromDb() {
-  const humidityFromDb = await getHumidityDataFromDb(20); // ambil 20 data terbaru (atau sesuai kebutuhan)
+  const humidityFromDb = await getHumidityDataFromDb(); // ambil 20 data terbaru (atau sesuai kebutuhan)
   if (!humidityFromDb || humidityFromDb.length === 0) {   
     myChartHumidity.data.datasets[0].data = [];
     myChartHumidity.data.labels = [];
@@ -398,7 +398,7 @@ async function updateDataHumidityFromDb() {
     const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   });
-  const values = sorted.map(item => item.phValue);
+  const values = sorted.map(item => item.humidityValue);
 
   myChartHumidity.data.datasets[0].data = values;
   myChartHumidity.data.labels = labels;
