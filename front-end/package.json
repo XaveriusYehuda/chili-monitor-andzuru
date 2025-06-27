@@ -8,7 +8,7 @@
   "main": "index.mjs",
   "scripts": {
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"green,blue\" \"npm run server\" \"npm run client\"",
-    "client": "vite --host 0.0.0.0 --port 8080",
+    "client": "vite",
     "server": "node app.js",
     "build": "vite build",
     "start": "node app.js"

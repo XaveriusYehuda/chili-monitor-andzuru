@@ -216,8 +216,8 @@ const setupWebSocket = () => {
 
       // Update tampilan nilai Ph dan Kelembapan
       // `toFixed(2)` hanya bisa dipanggil pada angka, jadi cek `isNaN` juga
-      const fixPh = !isNaN(phRaw) && typeof phRaw === 'number' ? phRaw.toFixed(2) : 'N/A';
-      const fixHumidity = !isNaN(humidityRaw) && typeof humidityRaw === 'number' ? humidityRaw.toFixed(2) : 'N/A';
+      const fixPh = !isNaN(phRaw) && typeof phRaw === 'number' ? phRaw.toFixed(1) : 'N/A';
+      const fixHumidity = !isNaN(humidityRaw) && typeof humidityRaw === 'number' ? humidityRaw.toFixed(1) : 'N/A';
 
       const phElement = document.getElementById('phValue');
       const humidityElement = document.getElementById('humidityValue');
@@ -364,12 +364,16 @@ const dataPh = {
 
 // config
 const configPh = {
-  type: 'bar',
+  type: 'line',
   data: dataPh,
   options: {
     scales: {
       y: {
-        beginAtZero: true
+        beginAtZero: false,
+        // min dan max akan diatur otomatis oleh Chart.js sesuai data
+        // suggestedMin dan suggestedMax bisa diatur jika ingin range lebih "longgar"
+        // suggestedMin: 5, // contoh: bisa dihapus jika ingin full auto
+        // suggestedMax: 9
       }
     }
   }
@@ -446,12 +450,13 @@ const dataHumidity = {
 };
 
 const configHumidity = {
-  type: 'bar',
+  type: 'line',
   data: dataHumidity,
   options: {
     scales: {
       y: {
-        beginAtZero: true
+        beginAtZero: false,
+        // min dan max akan diatur otomatis oleh Chart.js sesuai data
       }
     }
   }

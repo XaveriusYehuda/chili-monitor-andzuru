@@ -85,7 +85,7 @@ export function saveHumidityDataToDb(data) {
 }
 
 // Fungsi untuk membaca semua data dari IndexedDB (opsional, jika Anda ingin menampilkan history)
-export function getHumidityDataFromDb(limit = 10) {
+export function getHumidityDataFromDb(limit = 8) {
   return new Promise((resolve, reject) => {
 	if (!db) {
 	  console.warn('IndexedDB not open. Cannot get data.');
