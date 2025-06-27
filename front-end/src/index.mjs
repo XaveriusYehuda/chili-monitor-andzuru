@@ -144,30 +144,42 @@ const setupWebSocket = () => {
       console.log('📨 Data diterima:', data);
 
       const { topic, data: sensorData, chartData, timestamp } = data;
+      const { ph, humidity } = chartData;
 
-      const phDataReceivedAt = chartData.ph.timestamps[chartData.ph.timestamps.length - 1];
-      const humidityDataReceivedAt = chartData.humidity.timestamps[chartData.humidity.timestamps.length - 1];
+      let phDataReceivedAtFix;
+      if (ph && Array.isArray(ph.timestamps) && ph.timestamps.length > 0) {
+        const phDataReceivedAt = ph.timestamps[ph.timestamps.length - 1];
+        phDataReceivedAtFix = phDataReceivedAt.toISOString();
+      } phDataReceivedAtFix = null;
+
+      let humidityDataReceivedAtFix;
+      if (humidity && Array.isArray(humidity.timestamps) && humidity.timestamps.length > 0) {
+        const humidityDataReceivedAt = humidity.timestamps[humidity.timestamps.length - 1];
+        humidityDataReceivedAtFix = humidityDataReceivedAt.toISOString();
+      } humidityDataReceivedAtFix = null;
 
       const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000)); // Waktu data diterima browser (milidetik)
+      const browserReceivedTimestampFix = browserReceivedTimestamp.toISOString();
 
       // Hitung selisih waktu
       const latencyMs = browserReceivedTimestamp - Number(timestamp);
+      const realTimestamp = timestamp.toISOString();
 
       // Data yang akan disimpan ke IndexedDB
       const recordHumidity = {
-        timestampCloudReceived: timestamp, // Konversi timestamp dari string ISO ke milidetik
-        timestampBrowserReceived: browserReceivedTimestamp,
+        timestampCloudReceived: realTimestamp, 
+        timestampBrowserReceived: browserReceivedTimestampFix,
         latency: parseFloat(latencyMs), 
         humidityValue: parseFloat(sensorData?.Kelembapan ?? null),
-        humidityDataReceivedAt: humidityDataReceivedAt,
+        humidityDataReceivedAt: humidityDataReceivedAtFix,
       };
       
       const recordPh = {
-        timestampCloudReceived: timestamp, // Konversi timestamp dari string ISO ke milidetik
-        timestampBrowserReceived: browserReceivedTimestamp,
+        timestampCloudReceived: realTimestamp, 
+        timestampBrowserReceived: browserReceivedTimestampFix,
         latency: parseFloat(latencyMs),
         phValue: parseFloat(sensorData?.Ph ?? null),
-        phDataReceivedAt: phDataReceivedAt,
+        phDataReceivedAt: phDataReceivedAtFix,
       };
 
       // Simpan record ke IndexedDB
@@ -199,8 +211,6 @@ const setupWebSocket = () => {
       if (phElement) phElement.textContent = fixPh;
       if (humidityElement) humidityElement.textContent = fixHumidity;
       if (chartData) {
-
-        const { ph, humidity } = chartData;
 
         if (ph && Array.isArray(ph.timestamps) && Array.isArray(ph.values)) {
           const phTimestamps = ph.timestamps.map(t => Number(t));
