@@ -174,7 +174,7 @@ const setupWebSocket = () => {
       };
       
       const recordPh = {
-        timestampCloudReceived: realTimestamp, 
+        timestampCloudReceived: timestamp, 
         timestampBrowserReceived: browserReceivedTimestampFix,
         latency: parseFloat(latencyMs),
         phValue: parseFloat(sensorData?.Ph ?? null),
