@@ -48,6 +48,14 @@ export function savePhDataToDb(data) {
 	console.warn('IndexedDB not open. Cannot save pH data.');
 	return;
   }
+  if (!data || typeof data !== 'object') {
+	console.warn('Invalid pH data. Not saving to IndexedDB.');
+	return;
+  }
+  // Remove id if exists to avoid DataError
+  if ('id' in data) {
+	delete data.id;
+  }
   const transaction = db.transaction([STORE_NAME_2], 'readwrite');
   const objectStore = transaction.objectStore(STORE_NAME_2);
   const request = objectStore.add(data);
