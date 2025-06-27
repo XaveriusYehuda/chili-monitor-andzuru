@@ -149,13 +149,13 @@ const setupWebSocket = () => {
       let phDataReceivedAtFix;
       if (ph && Array.isArray(ph.timestamps) && ph.timestamps.length > 0) {
         const phDataReceivedAt = ph.timestamps[ph.timestamps.length - 1];
-        phDataReceivedAtFix = phDataReceivedAt.toISOString();
+        phDataReceivedAtFix = typeof phDataReceivedAt === 'string' ? new Date(phDataReceivedAt).toISOString() : phDataReceivedAt;
       } phDataReceivedAtFix = null;
 
       let humidityDataReceivedAtFix;
       if (humidity && Array.isArray(humidity.timestamps) && humidity.timestamps.length > 0) {
         const humidityDataReceivedAt = humidity.timestamps[humidity.timestamps.length - 1];
-        humidityDataReceivedAtFix = humidityDataReceivedAt.toISOString();
+        humidityDataReceivedAtFix =  typeof humidityDataReceivedAt === 'string' ? new Date(humidityDataReceivedAt).toISOString() : humidityDataReceivedAt;
       } humidityDataReceivedAtFix = null;
 
       const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000)); // Waktu data diterima browser (milidetik)
