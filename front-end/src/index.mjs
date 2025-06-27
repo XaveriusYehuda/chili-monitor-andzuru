@@ -163,11 +163,10 @@ const setupWebSocket = () => {
 
       // Hitung selisih waktu
       const latencyMs = browserReceivedTimestamp - Number(timestamp);
-      const realTimestamp = timestamp.toISOString();
 
       // Data yang akan disimpan ke IndexedDB
       const recordHumidity = {
-        timestampCloudReceived: realTimestamp, 
+        timestampCloudReceived: timestamp, 
         timestampBrowserReceived: browserReceivedTimestampFix,
         latency: parseFloat(latencyMs), 
         humidityValue: parseFloat(sensorData?.Kelembapan ?? null),
