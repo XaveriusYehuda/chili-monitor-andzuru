@@ -146,17 +146,35 @@ const setupWebSocket = () => {
       const { topic, data: sensorData, chartData, timestamp } = data;
       const { ph, humidity } = chartData;
 
-      let phDataReceivedAtFix;
-      if (ph && Array.isArray(ph.timestamps)) {
-        const phDataReceivedAt = ph.timestamps[ph.timestamps.length - 1];
-        phDataReceivedAtFix = typeof phDataReceivedAt === 'string' ? new Date(phDataReceivedAt).toISOString() : phDataReceivedAt;
-      } phDataReceivedAtFix = null;
+      // Perbaikan konversi phDataReceivedAtFix
+      let phDataReceivedAtFix = null;
+      if (ph && Array.isArray(ph.timestamps) && ph.timestamps.length > 0) {
+        let phDataReceivedAt = ph.timestamps[ph.timestamps.length - 1];
+        if (typeof phDataReceivedAt === 'string' && phDataReceivedAt) {
+          phDataReceivedAtFix = new Date(phDataReceivedAt).toISOString();
+        } else if (typeof phDataReceivedAt === 'number' && !isNaN(phDataReceivedAt)) {
+          // Jika timestamp dalam detik, kalikan 1000
+          if (phDataReceivedAt < 10000000000) {
+            phDataReceivedAt *= 1000;
+          }
+          phDataReceivedAtFix = new Date(phDataReceivedAt).toISOString();
+        }
+      }
 
-      let humidityDataReceivedAtFix;
-      if (humidity && Array.isArray(humidity.timestamps)) {
-        const humidityDataReceivedAt = humidity.timestamps[humidity.timestamps.length - 1];
-        humidityDataReceivedAtFix =  typeof humidityDataReceivedAt === 'string' ? new Date(humidityDataReceivedAt).toISOString() : humidityDataReceivedAt;
-      } humidityDataReceivedAtFix = null;
+      // Perbaikan konversi humidityDataReceivedAtFix
+      let humidityDataReceivedAtFix = null;
+      if (humidity && Array.isArray(humidity.timestamps) && humidity.timestamps.length > 0) {
+        let humidityDataReceivedAt = humidity.timestamps[humidity.timestamps.length - 1];
+        if (typeof humidityDataReceivedAt === 'string' && humidityDataReceivedAt) {
+          humidityDataReceivedAtFix = new Date(humidityDataReceivedAt).toISOString();
+        } else if (typeof humidityDataReceivedAt === 'number' && !isNaN(humidityDataReceivedAt)) {
+          // Jika timestamp dalam detik, kalikan 1000
+          if (humidityDataReceivedAt < 10000000000) {
+            humidityDataReceivedAt *= 1000;
+          }
+          humidityDataReceivedAtFix = new Date(humidityDataReceivedAt).toISOString();
+        }
+      }
 
       const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000)); // Waktu data diterima browser (milidetik)
       const browserReceivedTimestampFix = browserReceivedTimestamp.toISOString();
