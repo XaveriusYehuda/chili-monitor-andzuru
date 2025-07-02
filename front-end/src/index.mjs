@@ -183,16 +183,24 @@ const setupWebSocket = () => {
       const latencyMs = browserReceivedTimestamp - Number(timestamp);
 
       // Data yang akan disimpan ke IndexedDB
-      const recordHumidity = {
-        timestampCloudReceived: timestamp, 
-        timestampBrowserReceived: browserReceivedTimestampFix,
-        latency: parseFloat(latencyMs), 
-        humidityValue: parseFloat(sensorData?.Kelembapan ?? null),
-        humidityDataReceivedAt: humidityDataReceivedAtFix,
-      };
-      saveHumidityDataToDb(recordHumidity);
+      let recordHumidity;
+      if (sensorData.Kelembapan === undefined || sensorData.Kelembapan === null) {
+        recordHumidity = null; // Jika Kelembapan tidak ada, recordHumidity tetap null
+        console.log('Kelembapan tidak ada pembaharuan data');
+      } else if (sensorData.Kelembapan !== undefined && sensorData.Kelembapan !== null) {
+        // Jika Kelembapan ada, buat record Kelembapan
+        recordHumidity = {
+          timestampCloudReceived: timestamp, 
+          timestampBrowserReceived: browserReceivedTimestampFix,
+          latency: parseFloat(latencyMs), 
+          humidityValue: parseFloat(sensorData?.Kelembapan ?? null),
+          humidityDataReceivedAt: humidityDataReceivedAtFix,
+        };
 
-      //  Kode ini dikhususkan pada nilai PH karena nilai PH jarang diganti.
+        saveHumidityDataToDb(recordHumidity);
+      }
+
+      // Kode ini dikhususkan pada nilai PH karena nilai PH jarang diganti.
       let recordPh; // Inisialisasi recordPh sebagai null
       if (sensorData?.Ph === undefined || sensorData?.Ph === null) {
         recordPh = null; // Jika Ph tidak ada, recordPh tetap null
@@ -203,7 +211,7 @@ const setupWebSocket = () => {
           timestampCloudReceived: timestamp, 
           timestampBrowserReceived: browserReceivedTimestampFix,
           latency: parseFloat(latencyMs),
-          phValue: parseFloat(sensorData.Ph),
+          phValue: parseFloat(sensorData.Ph ?? null),
           phDataReceivedAt: phDataReceivedAtFix,
         };
 
