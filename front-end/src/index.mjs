@@ -150,66 +150,6 @@ const setupWebSocket = () => {
       const { topic, data: sensorData, chartData, timestamp } = data;
       const { ph, humidity } = chartData || {};
 
-      // Ambil nilai mentah Ph dan Kelembapan
-      const phRaw = parseFloat(sensorData?.Ph ?? 'NaN');
-      const humidityRaw = parseFloat(sensorData?.Kelembapan ?? 'NaN');
-
-      // Update tampilan nilai Ph dan Kelembapan
-      const fixPh = !isNaN(phRaw) ? phRaw.toFixed(1) : 'N/A';
-      const fixHumidity = !isNaN(humidityRaw) ? humidityRaw.toFixed(1) : 'N/A';
-
-      const phElement = document.getElementById('phValue');
-      const humidityElement = document.getElementById('humidityValue');
-      const goodGroundStatus = document.getElementById('ground-good-status');
-      const poorGroundStatus = document.getElementById('ground-poor-status');
-
-      // Validasi nilai untuk status tanah
-      if (!isNaN(phRaw) && !isNaN(humidityRaw) && (phRaw > 8.5 || phRaw < 5.5 || humidityRaw > 90.00 || humidityRaw < 10.00)) {
-        goodGroundStatus.classList.add('hidden');
-        poorGroundStatus.classList.remove('hidden');
-      } else {
-        poorGroundStatus.classList.add('hidden');
-        goodGroundStatus.classList.remove('hidden');
-      }
-
-      if (phElement) phElement.textContent = fixPh;
-      if (humidityElement) humidityElement.textContent = fixHumidity;
-
-      // Update chart jika data tersedia
-      if (chartData) {
-        if (ph && Array.isArray(ph.timestamps) && Array.isArray(ph.values)) {
-          const phTimestamps = ph.timestamps.map(Number);
-          const phValues = ph.values.map(Number);
-          // Jika offline, pakai data dari IndexedDB. Jika online, cek IndexedDB dulu, jika kosong baru pakai data WebSocket
-          if (!navigator.onLine) {
-            updateDataPhFromDb();
-          } else {
-            getPhDataFromDb(1).then(phFromDb => {
-              if (phFromDb && phFromDb.length > 0) {
-                setTimeout(updateDataPhFromDb, 200);
-              } else {
-                updateDataPh(phTimestamps, phValues);
-              }
-            });
-          }
-        }
-        if (humidity && Array.isArray(humidity.timestamps) && Array.isArray(humidity.values)) {
-          const humidityTimestamps = humidity.timestamps.map(Number);
-          const humidityValues = humidity.values.map(Number);
-          if (!navigator.onLine) {
-            updateDataHumidityFromDb();
-          } else {
-            getHumidityDataFromDb(1).then(humidityFromDb => {
-              if (humidityFromDb && humidityFromDb.length > 0) {
-                setTimeout(updateDataHumidityFromDb, 200);
-              } else {
-                updateDataHumidity(humidityTimestamps, humidityValues);
-              }
-            });
-          }
-        }
-      }
-
       // Simpan data terbaru ke IndexedDB setelah di-render ke grafik
       // Perbaikan konversi phDataReceivedAtFix
       let phDataReceivedAtFix = null;
@@ -244,32 +184,92 @@ const setupWebSocket = () => {
       const latencyMs = browserReceivedTimestamp - Number(timestamp);
 
       // Data yang akan disimpan ke IndexedDB
+      let recordHumidity;
+      let recordPh;
       if (sensorData) {
         // Humidity
         if (sensorData.Kelembapan !== undefined && sensorData.Kelembapan !== null && !isNaN(parseFloat(sensorData.Kelembapan))) {
-          const recordHumidity = {
+          recordHumidity = {
             timestampCloudReceived: timestamp,
             timestampBrowserReceived: browserReceivedTimestampFix,
             latency: parseFloat(latencyMs),
             humidityValue: parseFloat(sensorData.Kelembapan),
             humidityDataReceivedAt: humidityDataReceivedAtFix,
           };
-          saveHumidityDataToDb(recordHumidity);
         } else {
           console.log('Kelembapan tidak ada pembaharuan data');
         }
+
         // pH
         if (sensorData.Ph !== undefined && sensorData.Ph !== null && !isNaN(parseFloat(sensorData.Ph))) {
-          const recordPh = {
+          recordPh = {
             timestampCloudReceived: timestamp,
             timestampBrowserReceived: browserReceivedTimestampFix,
             latency: parseFloat(latencyMs),
             phValue: parseFloat(sensorData.Ph),
             phDataReceivedAt: phDataReceivedAtFix,
           };
-          savePhDataToDb(recordPh);
         } else {
           console.log('PH tidak ada pembaharuan data');
+        }
+      }
+
+      // Ambil nilai mentah Ph dan Kelembapan
+      const phRaw = parseFloat(sensorData?.Ph ?? 'NaN');
+      const humidityRaw = parseFloat(sensorData?.Kelembapan ?? 'NaN');
+
+      // Update tampilan nilai Ph dan Kelembapan
+      const fixPh = !isNaN(phRaw) ? phRaw.toFixed(1) : 'N/A';
+      const fixHumidity = !isNaN(humidityRaw) ? humidityRaw.toFixed(1) : 'N/A';
+
+      const phElement = document.getElementById('phValue');
+      const humidityElement = document.getElementById('humidityValue');
+      const goodGroundStatus = document.getElementById('ground-good-status');
+      const poorGroundStatus = document.getElementById('ground-poor-status');
+
+      // Validasi nilai untuk status tanah
+      if (!isNaN(phRaw) && !isNaN(humidityRaw) && (phRaw > 8.5 || phRaw < 5.5 || humidityRaw > 90.00 || humidityRaw < 10.00)) {
+        goodGroundStatus.classList.add('hidden');
+        poorGroundStatus.classList.remove('hidden');
+      } else {
+        poorGroundStatus.classList.add('hidden');
+        goodGroundStatus.classList.remove('hidden');
+      }
+
+      if (phElement) phElement.textContent = fixPh;
+      if (humidityElement) humidityElement.textContent = fixHumidity;
+
+      // Update chart jika data tersedia
+      if (chartData) {
+        if (ph && Array.isArray(ph.timestamps) && Array.isArray(ph.values)) {
+          const phTimestamps = ph.timestamps.map(Number);
+          const phValues = ph.values.map(Number);
+          // Jika offline, pakai data dari IndexedDB. Jika online, cek IndexedDB dulu, jika kosong baru pakai data WebSocket
+          if (!navigator.onLine) {
+            getPhDataFromDb(1).then(phFromDb => {
+              if (phFromDb && phFromDb.length > 0) {
+                setTimeout(updateDataPhFromDb, 200);
+              }
+            })
+          } else {
+            updateDataPh(phTimestamps, phValues);
+            savePhDataToDb(recordPh);
+          }
+        }
+
+        if (humidity && Array.isArray(humidity.timestamps) && Array.isArray(humidity.values)) {
+          const humidityTimestamps = humidity.timestamps.map(Number);
+          const humidityValues = humidity.values.map(Number);
+          if (!navigator.onLine) {
+            getHumidityDataFromDb(1).then(humidityFromDb => {
+              if (humidityFromDb && humidityFromDb.length > 0) {
+                setTimeout(updateDataHumidityFromDb, 200);
+              }
+            })
+          } else {
+            updateDataHumidity(humidityTimestamps, humidityValues);
+            saveHumidityDataToDb(recordHumidity);
+          }
         }
       }
     } catch (error) {
