@@ -115,7 +115,7 @@ export function getHumidityDataFromDb(limit = 8) {
   });
 }
 
-export function getPhDataFromDb(limit = 10) {
+export function getPhDataFromDb(limit = 8) {
   return new Promise((resolve, reject) => {
 	if (!db) {
 	  console.warn('IndexedDB not open. Cannot get data.');
@@ -145,51 +145,46 @@ export function getPhDataFromDb(limit = 10) {
   });
 }
 
-// Tidak dipakai
 // Fungsi untuk menghapus data lama dari IndexedDB (opsional, untuk menjaga ukuran DB)
-export function cleanOldDataFromDb(maxEntries = 100) {
-	return new Promise((resolve, reject) => {
-		if (!db) {
-			console.warn('IndexedDB not open. Cannot clean data.');
-			resolve();
-			return;
-		}
-
-		const transaction = db.transaction([STORE_NAME], 'readwrite');
-		const objectStore = transaction.objectStore(STORE_NAME);
-		const request = objectStore.count();
-
-		request.onsuccess = (event) => {
-			const count = event.target.result;
-			if (count > maxEntries) {
-				const numToDelete = count - maxEntries;
-				const deleteRequest = objectStore.openCursor();
-				let deletedCount = 0;
-
-				deleteRequest.onsuccess = (cursorEvent) => {
-					const cursor = cursorEvent.target.result;
-					if (cursor && deletedCount < numToDelete) {
-						cursor.delete();
-						deletedCount++;
-						cursor.continue();
-					} else {
-						console.log(`Cleaned ${deletedCount} old entries from IndexedDB.`);
-						resolve();
-					}
-				};
-
-				deleteRequest.onerror = (err) => {
-					console.error('Error cleaning old data:', err);
-					reject(err);
-				};
-			} else {
-				resolve();
-			}
-		};
-
-		request.onerror = (err) => {
-			console.error('Error counting data for cleanup:', err);
-			reject(err);
-		};
-	});
-}
+// Catatan: STORE_NAME harus didefinisikan jika ingin menggunakan fungsi ini.
+// export function cleanOldDataFromDb(storeName, maxEntries = 100) {
+//   return new Promise((resolve, reject) => {
+//     if (!db) {
+//       console.warn('IndexedDB not open. Cannot clean data.');
+//       resolve();
+//       return;
+//     }
+//     const transaction = db.transaction([storeName], 'readwrite');
+//     const objectStore = transaction.objectStore(storeName);
+//     const request = objectStore.count();
+//     request.onsuccess = (event) => {
+//       const count = event.target.result;
+//       if (count > maxEntries) {
+//         const numToDelete = count - maxEntries;
+//         const deleteRequest = objectStore.openCursor();
+//         let deletedCount = 0;
+//         deleteRequest.onsuccess = (cursorEvent) => {
+//           const cursor = cursorEvent.target.result;
+//           if (cursor && deletedCount < numToDelete) {
+//             cursor.delete();
+//             deletedCount++;
+//             cursor.continue();
+//           } else {
+//             console.log(`Cleaned ${deletedCount} old entries from IndexedDB.`);
+//             resolve();
+//           }
+//         };
+//         deleteRequest.onerror = (err) => {
+//           console.error('Error cleaning old data:', err);
+//           reject(err);
+//         };
+//       } else {
+//         resolve();
+//       }
+//     };
+//     request.onerror = (err) => {
+//       console.error('Error counting data for cleanup:', err);
+//       reject(err);
+//     };
+//   });
+// }

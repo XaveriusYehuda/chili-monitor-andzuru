@@ -11,27 +11,43 @@ const server = http.createServer(app);
 
 app.use(cors());
 
+// Cache data sensor (FIFO, max 10 data per sensor)
+const sensorDataCache = new Map(); // <-- ini harus muncul lebih atas!
+
 // WebSocket Server untuk client lokal
 const wss = new WebSocket.Server({ server });
 const clients = new Set();
 
-// Cache data sensor (FIFO, max 10 data per sensor)
-const sensorDataCache = new Map(); // <-- ini harus muncul lebih atas!
-
+// app.js
 function normalizeTimestamp(timestamp) {
   if (typeof timestamp === 'string') {
-    timestamp = parseFloat(timestamp);
+    // Coba parse string ke float, jika gagal fallback ke Date.parse atau Date.now
+    const parsed = parseFloat(timestamp);
+    if (!isNaN(parsed)) {
+        timestamp = parsed;
+    } else {
+        // Jika string bukan angka murni, coba parse sebagai ISO string atau format lain
+        const dateParsed = Date.parse(timestamp);
+        if (!isNaN(dateParsed)) {
+            timestamp = dateParsed;
+        } else {
+            console.warn(`Timestamp string tidak dapat dinormalisasi: ${timestamp}. Menggunakan Date.now().`);
+            return Date.now(); // Fallback jika tidak bisa di-parse
+        }
+    }
   }
-  if (timestamp < 10_000_000_000) {
-    return Math.round(timestamp * 1000);
+
+  // Jika timestamp sangat kecil (kemungkinan dalam detik)
+  if (timestamp < 10_000_000_000) { // Angka ini sekitar awal 2000-an dalam milidetik
+    return Math.round(timestamp * 1000); // Konversi detik ke milidetik
   } else {
-    return Math.round(timestamp);
+    return Math.round(timestamp); // Asumsikan sudah dalam milidetik
   }
 }
 
 function addDataToCache(nilaiSensor, dataItem) {
   if (dataItem.value === null || dataItem.value === undefined || isNaN(dataItem.value)) {
-    console.warn(`⛔ Data tidak valid (${nilaiSensor}), tidak disimpan:`, dataItem);
+    console.warn(`Data tidak valid (${nilaiSensor}), tidak disimpan:`, dataItem);
     return;
   }
 
@@ -149,12 +165,21 @@ function connectAwsWebSocket() {
             return;
           }
 
+          // Penting: Pastikan timestamp selalu ada dan valid
+          let itemTimestamp = time || payload.timestamp;
+          if (itemTimestamp === undefined || itemTimestamp === null) {
+              itemTimestamp = Date.now(); // Fallback jika tidak ada timestamp
+              console.warn(`Timestamp tidak ditemukan untuk ${nilaiSensor}. Menggunakan Date.now().`);
+          }
+
           const simplifiedData = {
-            timestamp: time || payload.timestamp, // Gunakan `time` jika tersedia, atau `payload.timestamp`
-            value: parseFloat(payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null),
+              timestamp: itemTimestamp,
+              value: parseFloat(payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null),
           };
-          if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
+          if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) {
               addDataToCache(nilaiSensor, simplifiedData);
+          } else {
+              console.warn(`Nilai sensor tidak valid untuk ${nilaiSensor}:`, simplifiedData);
           }
         });
         broadcastLatestCacheData();
@@ -321,7 +346,11 @@ mqttService.setMessageHandler((topic, payload) => {
     // Perbaikan Penting: Tambahkan data MQTT ke cache juga!
     let sensorTypeFromTopic = '';
     let sensorValue = null;
-    let timestamp = normalizedData.timestamp || Date.now(); // Gunakan timestamp dari payload jika ada, jika tidak, Date.now()
+    let timestamp = normalizedData.timestamp; // Ambil timestamp dari MQTT payload
+    if (timestamp === undefined || timestamp === null) {
+        timestamp = Date.now(); // Fallback jika tidak ada timestamp di MQTT payload
+        console.warn(`Timestamp tidak ditemukan di MQTT payload. Menggunakan Date.now().`);
+    } // Gunakan timestamp dari payload jika ada, jika tidak, Date.now()
 
     if (topic === phKey) {
         sensorTypeFromTopic = phKey;
