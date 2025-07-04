@@ -23,18 +23,14 @@ export function openDb() {
 
 		request.onupgradeneeded = (event) => {
 			const db = event.target.result;
-			// Buat object store untuk pH
+			// Buat object store untuk pH tanpa index tambahan
 			if (!db.objectStoreNames.contains(STORE_NAME_2)) {
-				const phStore = db.createObjectStore(STORE_NAME_2, { keyPath: 'id', autoIncrement: true });
-				phStore.createIndex('timestampCloudReceived', 'timestampCloudReceived', { unique: false });
-				phStore.createIndex('timestampBrowserReceived', 'timestampBrowserReceived', { unique: false });
+				db.createObjectStore(STORE_NAME_2, { keyPath: 'id', autoIncrement: true });
 				console.log(`Object store '${STORE_NAME_2}' created.`);
 			}
-			// Buat object store untuk kelembapan
+			// Buat object store untuk kelembapan tanpa index tambahan
 			if (!db.objectStoreNames.contains(STORE_NAME_1)) {
-				const humidityStore = db.createObjectStore(STORE_NAME_1, { keyPath: 'id', autoIncrement: true });
-				humidityStore.createIndex('timestampCloudReceived', 'timestampCloudReceived', { unique: false });
-				humidityStore.createIndex('timestampBrowserReceived', 'timestampBrowserReceived', { unique: false });
+				db.createObjectStore(STORE_NAME_1, { keyPath: 'id', autoIncrement: true });
 				console.log(`Object store '${STORE_NAME_1}' created.`);
 			}
 		};
