@@ -62,13 +62,14 @@ export function savePhDataToDb(data) {
   request.onsuccess = (event) => {
 	const cursor = event.target.result;
 	if (cursor) {
-	  // Bandingkan seluruh field kecuali id
-	  const { id, ...rest } = cursor.value;
+	  const { id, humidityValue } = cursor.value;
+	  if (humidityValue === data.humidityValue) {
+		isDuplicate = true;
+		return;
+	  }
 	  const { id: dataId, ...dataRest } = data;
 	  if (JSON.stringify(rest) === JSON.stringify(dataRest)) {
 		isDuplicate = true;
-		// Data sama ditemukan, tidak simpan
-		// console.log('Duplicate pH data found, not saving.');
 		return;
 	  }
 	  cursor.continue();
@@ -95,57 +96,55 @@ export function savePhDataToDb(data) {
 
 // Simpan data ke object store kelembapan
 export function saveHumidityDataToDb(data) {
-  if (!db) {
-	console.warn('IndexedDB not open. Cannot save humidity data.');
-	return;
-  }
-  if (!data || typeof data !== 'object') {
-	console.warn('Invalid humidity data. Not saving to IndexedDB.');
-	return;
-  }
-  // Remove id if exists to avoid DataError
-  if ('id' in data) {
-	delete data.id;
-  }
-
-  // Check for duplicate data before saving
-  const transaction = db.transaction([STORE_NAME_1], 'readonly');
-  const objectStore = transaction.objectStore(STORE_NAME_1);
-  const request = objectStore.openCursor(null, 'prev');
-  let isDuplicate = false;
-
-  request.onsuccess = (event) => {
-	const cursor = event.target.result;
-	if (cursor) {
-	  // Compare all fields except id
-	  const { id, ...rest } = cursor.value;
-	  const { id: dataId, ...dataRest } = data;
-	  if (JSON.stringify(rest) === JSON.stringify(dataRest)) {
-		isDuplicate = true;
-		// Duplicate found, do not save
-		// console.log('Duplicate humidity data found, not saving.');
+	if (!db) {
+		console.warn('IndexedDB not open. Cannot save humidity data.');
 		return;
-	  }
-	  cursor.continue();
-	} else {
-	  if (!isDuplicate) {
-		// No duplicate found, save data
-		const writeTransaction = db.transaction([STORE_NAME_1], 'readwrite');
-		const writeObjectStore = writeTransaction.objectStore(STORE_NAME_1);
-		const addRequest = writeObjectStore.add(data);
-		addRequest.onsuccess = () => {
-		  // console.log('Humidity data saved to IndexedDB:', data);
-		};
-		addRequest.onerror = (event) => {
-		  console.error('Error saving humidity data to IndexedDB:', event.target.errorCode);
-		};
-	  }
 	}
-  };
+	if (!data || typeof data !== 'object') {
+		console.warn('Invalid humidity data. Not saving to IndexedDB.');
+		return;
+	}
+	// Remove id if exists to avoid DataError
+	if ('id' in data) {
+		delete data.id;
+	}
 
-  request.onerror = (event) => {
-	console.error('Error checking for duplicate humidity data in IndexedDB:', event.target.errorCode);
-  };
+	// Check for duplicate phValue before saving
+	const transaction = db.transaction([STORE_NAME_1], 'readonly');
+	const objectStore = transaction.objectStore(STORE_NAME_1);
+	const request = objectStore.openCursor(null, 'prev');
+	let isDuplicate = false;
+
+	request.onsuccess = (event) => {
+		const cursor = event.target.result;
+		if (cursor) {
+			// Only compare phValue
+			if (cursor.value.phValue === data.phValue) {
+				isDuplicate = true;
+				// Duplicate found, do not save
+				// console.log('Duplicate phValue found, not saving.');
+				return;
+			}
+			cursor.continue();
+		} else {
+			if (!isDuplicate) {
+				// No duplicate phValue found, save data
+				const writeTransaction = db.transaction([STORE_NAME_1], 'readwrite');
+				const writeObjectStore = writeTransaction.objectStore(STORE_NAME_1);
+				const addRequest = writeObjectStore.add(data);
+				addRequest.onsuccess = () => {
+					// console.log('Humidity data saved to IndexedDB:', data);
+				};
+				addRequest.onerror = (event) => {
+					console.error('Error saving humidity data to IndexedDB:', event.target.errorCode);
+				};
+			}
+		}
+	};
+
+	request.onerror = (event) => {
+		console.error('Error checking for duplicate phValue in IndexedDB:', event.target.errorCode);
+	};
 }
 
 // Fungsi untuk membaca semua data dari IndexedDB (opsional, jika Anda ingin menampilkan history)
