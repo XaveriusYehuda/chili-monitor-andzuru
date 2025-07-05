@@ -47,7 +47,7 @@ function normalizeTimestamp(timestamp) {
 
   // Tambahkan offset GMT+7 (Jakarta)
   const jakartaOffsetMs = 7 * 60 * 60 * 1000;
-  return msTimestamp + jakartaOffsetMs;
+  return msTimestamp;
 }
 
 function addDataToCache(nilaiSensor, dataItem) {
