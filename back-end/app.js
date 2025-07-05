@@ -32,17 +32,22 @@ function normalizeTimestamp(timestamp) {
             timestamp = dateParsed;
         } else {
             console.warn(`Timestamp string tidak dapat dinormalisasi: ${timestamp}. Menggunakan Date.now().`);
-            return Date.now(); // Fallback jika tidak bisa di-parse
+            timestamp = Date.now(); // Fallback jika tidak bisa di-parse
         }
     }
   }
 
   // Jika timestamp sangat kecil (kemungkinan dalam detik)
+  let msTimestamp;
   if (timestamp < 10_000_000_000) { // Angka ini sekitar awal 2000-an dalam milidetik
-    return Math.round(timestamp * 1000); // Konversi detik ke milidetik
+    msTimestamp = Math.round(timestamp * 1000); // Konversi detik ke milidetik
   } else {
-    return Math.round(timestamp); // Asumsikan sudah dalam milidetik
+    msTimestamp = Math.round(timestamp); // Asumsikan sudah dalam milidetik
   }
+
+  // Tambahkan offset GMT+7 (Jakarta)
+  const jakartaOffsetMs = 7 * 60 * 60 * 1000;
+  return msTimestamp + jakartaOffsetMs;
 }
 
 function addDataToCache(nilaiSensor, dataItem) {

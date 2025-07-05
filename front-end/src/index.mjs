@@ -181,7 +181,10 @@ const setupWebSocket = () => {
 
       const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000));
       const browserReceivedTimestampFix = browserReceivedTimestamp.toISOString();
-      const latencyMs = browserReceivedTimestamp - Number(timestamp);
+      const timestampNum = Number(timestamp);
+      const latencyMs = !isNaN(timestampNum)
+        ? Number(browserReceivedTimestamp) - timestampNum
+        : 0;
 
       // Data yang akan disimpan ke IndexedDB
       let recordHumidity;
@@ -189,26 +192,30 @@ const setupWebSocket = () => {
       if (sensorData) {
         // Humidity
         if (sensorData.Kelembapan !== undefined && sensorData.Kelembapan !== null && !isNaN(parseFloat(sensorData.Kelembapan))) {
-          recordHumidity = {
+          // Simpan recordHumidity ke variabel global agar bisa diakses di luar fungsi
+          window.latestRecordHumidity = {
             timestampCloudReceived: timestamp,
             timestampBrowserReceived: browserReceivedTimestampFix,
             latency: parseFloat(latencyMs),
             humidityValue: parseFloat(sensorData.Kelembapan),
             humidityDataReceivedAt: humidityDataReceivedAtFix,
           };
+          recordHumidity = window.latestRecordHumidity;
         } else {
           console.log('Kelembapan tidak ada pembaharuan data');
         }
 
         // pH
         if (sensorData.Ph !== undefined && sensorData.Ph !== null && !isNaN(parseFloat(sensorData.Ph))) {
-          recordPh = {
+          // Simpan recordPh ke variabel global agar bisa diakses di luar fungsi
+          window.latestRecordPh = {
             timestampCloudReceived: timestamp,
             timestampBrowserReceived: browserReceivedTimestampFix,
             latency: parseFloat(latencyMs),
             phValue: parseFloat(sensorData.Ph),
             phDataReceivedAt: phDataReceivedAtFix,
           };
+          recordPh = window.latestRecordPh;
         } else {
           console.log('PH tidak ada pembaharuan data');
         }

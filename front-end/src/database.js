@@ -60,33 +60,27 @@ export function savePhDataToDb(data) {
   let isDuplicate = false;
 
   request.onsuccess = (event) => {
-	const cursor = event.target.result;
-	if (cursor) {
-	  const { id, humidityValue } = cursor.value;
-	  if (humidityValue === data.humidityValue) {
-		isDuplicate = true;
-		return;
-	  }
-	  const { id: dataId, ...dataRest } = data;
-	  if (JSON.stringify(rest) === JSON.stringify(dataRest)) {
-		isDuplicate = true;
-		return;
-	  }
-	  cursor.continue();
-	} else {
-	  if (!isDuplicate) {
-		// Tidak ada data sama, simpan data
-		const writeTransaction = db.transaction([STORE_NAME_2], 'readwrite');
-		const writeObjectStore = writeTransaction.objectStore(STORE_NAME_2);
-		const addRequest = writeObjectStore.add(data);
-		addRequest.onsuccess = () => {
-		  // console.log('pH data saved to IndexedDB:', data);
-		};
-		addRequest.onerror = (event) => {
-		  console.error('Error saving pH data to IndexedDB:', event.target.errorCode);
-		};
-	  }
-	}
+		const cursor = event.target.result;
+		if (cursor) {
+			if (cursor.value.phValue === data.phValue) {
+				isDuplicate = true;
+				return;
+			}
+			cursor.continue();
+		} else {
+			if (!isDuplicate) {
+				// Tidak ada data sama, simpan data
+				const writeTransaction = db.transaction([STORE_NAME_2], 'readwrite');
+				const writeObjectStore = writeTransaction.objectStore(STORE_NAME_2);
+				const addRequest = writeObjectStore.add(data);
+				addRequest.onsuccess = () => {
+					// console.log('pH data saved to IndexedDB:', data);
+				};
+				addRequest.onerror = (event) => {
+					console.error('Error saving pH data to IndexedDB:', event.target.errorCode);
+				};
+			}
+		}
   };
 
   request.onerror = (event) => {
@@ -118,11 +112,8 @@ export function saveHumidityDataToDb(data) {
 	request.onsuccess = (event) => {
 		const cursor = event.target.result;
 		if (cursor) {
-			// Only compare phValue
-			if (cursor.value.phValue === data.phValue) {
+			if (cursor.value.humidityValue === data.humidityValue) {
 				isDuplicate = true;
-				// Duplicate found, do not save
-				// console.log('Duplicate phValue found, not saving.');
 				return;
 			}
 			cursor.continue();
