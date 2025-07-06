@@ -151,7 +151,21 @@ function connectAwsWebSocket() {
         console.log('Received initial data:', parsed.data);
         sensorDataCache.clear();
 
-        const initialDataArray = Array.isArray(parsed.data) ? parsed.data : [parsed.data]; // Mengubah objek tunggal menjadi array
+         let initialDataToProcess = [];
+        if (Array.isArray(parsed.data)) {
+            // Jika parsed.data sudah array (misal: [{nilaiSensor: 'device/ph', ...}])
+            initialDataToProcess = parsed.data;
+        } else if (typeof parsed.data === 'object' && parsed.data !== null) {
+            // Jika parsed.data adalah objek dengan kunci 'ph' dan 'kelembapan'
+            if (Array.isArray(parsed.data.ph)) {
+                initialDataToProcess = initialDataToProcess.concat(parsed.data.ph);
+            }
+            if (Array.isArray(parsed.data.kelembapan)) {
+                initialDataToProcess = initialDataToProcess.concat(parsed.data.kelembapan);
+            }
+        } else {
+            console.warn('Format parsed.data tidak dikenal di initialData:', parsed.data);
+        } // Mengubah objek tunggal menjadi array
 
         // Simpan initial data ke cache khusus beserta timestamp
         sensorInitialDataCache = Array.isArray(parsed.data) ? parsed.data.map(item => ({...item})) : [];
