@@ -404,10 +404,6 @@ wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => ws.isAlive = true);
 
-  setTimeout(() => {
-      wsExternal.send(JSON.stringify({ action: 'getLastData' }));
-    }, 500);
-
   // TTL cache initial data
   const now = Date.now();
   const cacheValid = sensorInitialDataCache && (now - sensorInitialDataCacheTimestamp < INITIAL_DATA_TTL_MS);
