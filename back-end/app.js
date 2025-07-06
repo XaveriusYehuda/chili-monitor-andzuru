@@ -12,7 +12,12 @@ const server = http.createServer(app);
 app.use(cors());
 
 // Cache data sensor (FIFO, max 10 data per sensor)
-const sensorDataCache = new Map(); // <-- ini harus muncul lebih atas!
+const sensorDataCache = new Map();
+// Cache khusus untuk initial data dari AWS WebSocket
+let sensorInitialDataCache = null;
+let sensorInitialDataCacheTimestamp = 0; // Timestamp cache initial data
+const INITIAL_DATA_TTL_MS = 5000; // TTL cache initial data (ms)
+let pendingInitialDataClients = [];
 
 // WebSocket Server untuk client lokal
 const wss = new WebSocket.Server({ server });
@@ -50,16 +55,27 @@ function normalizeTimestamp(timestamp) {
   return msTimestamp;
 }
 
+// Debounce function
+let broadcastTimeout;
+const DEBOUNCE_DELAY = 200; // milliseconds
+
+function debouncedBroadcastLatestCacheData() {
+  clearTimeout(broadcastTimeout);
+  broadcastTimeout = setTimeout(() => {
+    broadcastLatestCacheData();
+  }, DEBOUNCE_DELAY);
+}
+
 function addDataToCache(nilaiSensor, dataItem) {
   if (dataItem.value === null || dataItem.value === undefined || isNaN(dataItem.value)) {
     console.warn(`Data tidak valid (${nilaiSensor}), tidak disimpan:`, dataItem);
     return;
   }
 
-  const normalizedValue = parseFloat(dataItem.value); // Tambahkan konversi eksplisit ke float di sini
+  const normalizedValue = parseFloat(dataItem.value);
   if (isNaN(normalizedValue)) {
-      console.warn(`Data nilai sensor tidak bisa dikonversi ke angka (${nilaiSensor}), tidak disimpan:`, dataItem);
-      return;
+    console.warn(`Data nilai sensor tidak bisa dikonversi ke angka (${nilaiSensor}), tidak disimpan:`, dataItem);
+    return;
   }
 
   if (!sensorDataCache.has(nilaiSensor)) {
@@ -67,34 +83,31 @@ function addDataToCache(nilaiSensor, dataItem) {
   }
 
   const cache = sensorDataCache.get(nilaiSensor);
-
   const normalizedTimestamp = normalizeTimestamp(dataItem.timestamp);
 
-  // Filter: Cegah duplikasi data berdasarkan timestamp dan value
-  const existingIndex = cache.findIndex(item => item.timestamp === normalizedTimestamp);
-  if (existingIndex !== -1) {
-    // Jika ada, perbarui nilainya (atau bisa juga skip jika Anda ingin hanya data unik)
-    cache[existingIndex].value = normalizedValue;
-    console.log(`Mengupdate data di cache untuk ${nilaiSensor} pada timestamp ${new Date(normalizedTimestamp).toISOString()}`);
-  } else {
-    // Jika tidak ada, tambahkan data baru
+  // Periksa apakah ada data yang sama persis (timestamp dan value)
+  const isActuallyNewData = !cache.some(item =>
+    item.timestamp === normalizedTimestamp && item.value === normalizedValue
+  );
+
+  if (isActuallyNewData) {
+    // Jika data baru, tambahkan
     cache.push({
-      timestamp: normalizedTimestamp,
-      value: normalizedValue
+        timestamp: normalizedTimestamp,
+        value: normalizedValue
     });
-    console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${dataItem.value}`);
-  }
+    cache.sort((a, b) => a.timestamp - b.timestamp); // Pastikan tetap terurut
 
-  cache.sort((a, b) => a.timestamp - b.timestamp);
-
-  if (cache.length > 10) {
-    cache.shift(); // FIFO
-    // console.log(`♻️ FIFO: Data lama dihapus dari ${nilaiSensor}`);
+    if (cache.length > 10) {
+        cache.shift(); // FIFO
+    }
+    console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);
+    // Panggil debounced broadcast hanya jika ada data baru yang ditambahkan
+    debouncedBroadcastLatestCacheData();
+  } else {
+    // console.log(`Data duplikat terdeteksi untuk ${nilaiSensor}, tidak disimpan.`);
   }
 }
-
-
-
 
 // Client WebSocket ke server eksternal (AWS)
 const wsExternalUrl  = 'wss://0p3brxy598.execute-api.ap-southeast-1.amazonaws.com/production';
@@ -136,47 +149,22 @@ function connectAwsWebSocket() {
       const parsed = JSON.parse(message);
       if (parsed.action === 'initialData') {
         console.log('Received initial data:', parsed.data);
-        sensorDataCache.clear(); // Perbaikan: Hapus cache lama saat menerima initial data
+        sensorDataCache.clear();
+        // Simpan initial data ke cache khusus beserta timestamp
+        sensorInitialDataCache = Array.isArray(parsed.data) ? parsed.data.map(item => ({...item})) : [];
+        sensorInitialDataCacheTimestamp = Date.now();
 
-        // Object.entries(parsed.data).forEach(([sensorType, dataArray]) => {
-        //   dataArray.forEach(item => {
-        //     const payload = item.payload;
-        //     const nilaiSensor = item.nilaiSensor;
-        //     const timestamp = item.time || (payload?.timestamp ?? Date.now());
-
-        //     if (!payload || typeof payload !== 'object') {
-        //       console.warn('Payload tidak sesuai:', payload);
-        //       return;
-        //     }
-
-        //     function extractSensorValue(payload) {
-        //       return payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null;
-        //     }
-
-        //     const simplifiedData = {
-        //       timestamp: timestamp,
-        //       value: extractSensorValue(payload)
-        //     };
-
-        //     addDataToCache(nilaiSensor, simplifiedData);
-        //   });
-        // });
-
-        parsed.data.forEach(item => { // Perbaikan: `parsed.data` seharusnya array langsung
+        parsed.data.forEach(item => {
           const { nilaiSensor, payload, time } = item;
-          // Perbaikan: Pastikan payload dan nilaiSensor valid
           if (!payload || typeof payload !== 'object' || !nilaiSensor) {
             console.warn('Payload atau nilaiSensor tidak valid di initialData:', item);
             return;
           }
-
-          // Penting: Pastikan timestamp selalu ada dan valid
           let itemTimestamp = time || payload.timestamp;
           if (itemTimestamp === undefined || itemTimestamp === null) {
-              itemTimestamp = Date.now(); // Fallback jika tidak ada timestamp
+              itemTimestamp = Date.now();
               console.warn(`Timestamp tidak ditemukan untuk ${nilaiSensor}. Menggunakan Date.now().`);
           }
-
           const simplifiedData = {
               timestamp: itemTimestamp,
               value: parseFloat(payload.ph ?? payload.Ph ?? payload.kelembapan ?? payload.Kelembapan ?? null),
@@ -187,15 +175,21 @@ function connectAwsWebSocket() {
               console.warn(`Nilai sensor tidak valid untuk ${nilaiSensor}:`, simplifiedData);
           }
         });
-        broadcastLatestCacheData();
 
-        // Tampilkan isi cache
-        // console.log('Isi sensorDataCache:');
-        // sensorDataCache.forEach((value, key) => {
-          // console.log(`Sensor: ${key}`);
-          // console.log(value);
-          // console.table(value);
-        // });
+        // Kirim initial data ke semua client yang sedang menunggu
+        if (pendingInitialDataClients.length > 0) {
+          const initialDataMsg = {
+            topic: 'initialData',
+            data: sensorInitialDataCache,
+            timestamp: new Date().toISOString()
+          };
+          pendingInitialDataClients.forEach(ws => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(initialDataMsg));
+            }
+          });
+          pendingInitialDataClients = [];
+        }
       }
 
       if (parsed.action === 'dataUpdate') {
@@ -248,7 +242,6 @@ function connectAwsWebSocket() {
               addDataToCache(nilaiSensor, simplifiedData);
           }
         });
-        broadcastLatestCacheData();
         // Tampilkan isi cache
         // console.log('Isi sensorDataCache:');
         // sensorDataCache.forEach((value, key) => {
@@ -370,7 +363,7 @@ mqttService.setMessageHandler((topic, payload) => {
     }
 
     // Setelah menambahkan data MQTT ke cache, baru broadcast dari cache
-    broadcastLatestCacheData();
+    // broadcastLatestCacheData();
 
     // const message = {
     //   topic,
@@ -404,51 +397,53 @@ connectAwsWebSocket();
 
 // WebSocket lokal untuk client UI
 wss.on('connection', (ws) => {
-  // console.log('New WebSocket client connected');
   clients.add(ws);
-
   ws.isAlive = true;
   ws.on('pong', () => ws.isAlive = true);
 
-  // Saat client baru connect, kirim data cache
-  // try {
-  //   const phData = sensorDataCache.get('device/ph') || [];
-  //   const humidityData = sensorDataCache.get('device/humidity') || [];
+  // TTL cache initial data
+  const now = Date.now();
+  const cacheValid = sensorInitialDataCache && (now - sensorInitialDataCacheTimestamp < INITIAL_DATA_TTL_MS);
 
-  //   const latestPh = phData[phData.length - 1]?.value ?? null;
-  //   const latestHumidity = humidityData[humidityData.length - 1]?.value ?? null;
+  if (cacheValid) {
+    // Cache masih valid, langsung kirim ke user
+    const initialDataMsg = {
+      topic: 'initialData',
+      data: sensorInitialDataCache,
+      timestamp: new Date().toISOString()
+    };
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(initialDataMsg));
+    }
+  } else {
+    // Cache tidak valid, request ke AWS dan masukkan user ke queue
+    if (wsExternal && wsExternal.readyState === WebSocket.OPEN) {
+      try {
+        wsExternal.send(JSON.stringify({ action: 'getLastData' }));
+        pendingInitialDataClients.push(ws);
+      } catch (err) {
+        console.error('Gagal mengirim permintaan initial data ke AWS WebSocket:', err);
+      }
+    } else {
+      console.warn('AWS WebSocket belum siap, initial data tidak dapat diminta sekarang.');
+      // Tetap masukkan ke queue, akan dikirim saat initialData diterima
+      pendingInitialDataClients.push(ws);
+    }
+  }
 
-  //   const message = {
-  //     topic: 'initialCacheData',
-  //     data: {
-  //       Ph: latestPh,
-  //       Kelembapan: latestHumidity
-  //     },
-  //     timestamp: new Date().toISOString(),
-  //     chartData: {
-  //       ph: extractChartData(phData),
-  //       humidity: extractChartData(humidityData)
-  //     }
-  //   };
-
-  //   const messageString = JSON.stringify(message);
-  //   if (ws.readyState === WebSocket.OPEN) {
-  //     ws.send(messageString);
-  //     // console.log('🚀 Kirim data cache awal ke client:', messageString);
-  //   }
-  // } catch (error) {
-  //   console.error('Error sending initial cache to client:', error);
-  // }
-
-  broadcastLatestCacheData(); // <-- Panggil di sini juga
+  // Broadcast data cache terbaru seperti biasa
+  broadcastLatestCacheData();
 
   ws.on('close', () => {
     clients.delete(ws);
+    // Hapus dari pending queue jika user disconnect sebelum initial data diterima
+    pendingInitialDataClients = pendingInitialDataClients.filter(client => client !== ws);
   });
 
   ws.on('error', (err) => {
     console.error('WebSocket error:', err);
     clients.delete(ws);
+    pendingInitialDataClients = pendingInitialDataClients.filter(client => client !== ws);
   });
 });
 
