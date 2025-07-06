@@ -137,8 +137,8 @@ const setupWebSocket = () => {
   ws.onopen = async () => {
     console.log('✅ WebSocket connected to', wsUrl);
     // Saat pertama kali terhubung, muat data historical dari IndexedDB
-    await updateDataPhFromDb();
-    await updateDataHumidityFromDb();
+    // await updateDataPhFromDb();
+    // await updateDataHumidityFromDb();
   };
 
   ws.onmessage = (event) => {

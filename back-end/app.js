@@ -101,7 +101,7 @@ function addDataToCache(nilaiSensor, dataItem) {
     if (cache.length > 10) {
         cache.shift(); // FIFO
     }
-    console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);
+    // console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);
     // Panggil debounced broadcast hanya jika ada data baru yang ditambahkan
     debouncedBroadcastLatestCacheData();
   } else {
@@ -401,6 +401,10 @@ wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => ws.isAlive = true);
 
+  setTimeout(() => {
+      wsExternal.send(JSON.stringify({ action: 'getLastData' }));
+    }, 500);
+
   // TTL cache initial data
   const now = Date.now();
   const cacheValid = sensorInitialDataCache && (now - sensorInitialDataCacheTimestamp < INITIAL_DATA_TTL_MS);
@@ -430,6 +434,38 @@ wss.on('connection', (ws) => {
       pendingInitialDataClients.push(ws);
     }
   }
+
+  // Saat client baru connect, kirim data cache
+  // try {
+  //   const phData = sensorDataCache.get('device/ph') || [];
+  //   const humidityData = sensorDataCache.get('device/humidity') || [];
+
+  //   const latestPh = phData[phData.length - 1]?.value ?? null;
+  //   const latestHumidity = humidityData[humidityData.length - 1]?.value ?? null;
+
+  //   const message = {
+  //     topic: 'initialCacheData',
+  //     data: {
+  //       Ph: latestPh,
+  //       Kelembapan: latestHumidity
+  //     },
+  //     timestamp: new Date().toISOString(),
+  //     chartData: {
+  //       ph: extractChartData(phData),
+  //       humidity: extractChartData(humidityData)
+  //     }
+  //   };
+
+  //   const messageString = JSON.stringify(message);
+  //   if (ws.readyState === WebSocket.OPEN) {
+  //     ws.send(messageString);
+  //     // console.log('🚀 Kirim data cache awal ke client:', messageString);
+  //   }
+  // } catch (error) {
+  //   console.error('Error sending initial cache to client:', error);
+  // }
+
+  // broadcastLatestCacheData(); // <-- Panggil di sini juga
 
   // Broadcast data cache terbaru seperti biasa
   broadcastLatestCacheData();
