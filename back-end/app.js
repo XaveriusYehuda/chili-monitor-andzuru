@@ -151,7 +151,7 @@ function connectAwsWebSocket() {
         console.log('Received initial data:', parsed.data);
         sensorDataCache.clear();
 
-         let initialDataToProcess = [];
+        let initialDataToProcess = [];
         if (Array.isArray(parsed.data)) {
             // Jika parsed.data sudah array (misal: [{nilaiSensor: 'device/ph', ...}])
             initialDataToProcess = parsed.data;
@@ -171,7 +171,7 @@ function connectAwsWebSocket() {
         sensorInitialDataCache = Array.isArray(parsed.data) ? parsed.data.map(item => ({...item})) : [];
         sensorInitialDataCacheTimestamp = Date.now();
 
-         initialDataArray.forEach(item => {
+        initialDataToProcess.forEach(item => {
           const { nilaiSensor, payload, time } = item;
           if (!payload || typeof payload !== 'object' || !nilaiSensor) {
             console.warn('Payload atau nilaiSensor tidak valid di initialData:', item);
