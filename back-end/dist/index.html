@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>An-Dzuru Monitor</title>
-  <script type="module" crossorigin src="/assets/index-nyh1rtkh.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-Dm5P65bc.css">
+  <script type="module" crossorigin src="/assets/index-BHj9Ycek.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-B5r-gqp7.css">
 </head>
 <body>
   <!-- Hero Section Section Start -->
@@ -170,9 +170,23 @@
   </footer>
   <!-- Footer Section End -->
 
+  <section id="modal-confirm-download-container" class="fixed hidden z-[3000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-600 opacity-75"></section>
+  <section id="modal-confirm-download-alert" class="fixed hidden z-[4000] left-1/2 top-1/2 transform -translate-y-1/2 -translate-x-1/2 max-w-[700px] h-full overflow-auto">
+    <div class="flex justify-center items-center min-h-screen py-10">
+      <div id="modal-main-download" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-6 pr-6 pb-6 w-[87vw] max-w-[87vw] opacity-100">
+        <h2 id="title-download-modal" class="text-3xl md:text-4xl lg:text-5xl font-bold text-center text-primary my-6">Download Data</h2>
+        <p id="content-download-modal" class="text-lg/8 md:text-xl/9 lg:text-2xl/9 text-center text-primary mb-4">Do you want to download the data?</p>
+        <div class="mt-6 mb-6 flex justify-center items-center gap-4">
+          <button id="download-data" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Download</button>
+          <button id="cancel-download" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="modal-container-1" class="fixed hidden z-[1000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-900 opacity-85"></section>
   <section id="modal-container-2" class="fixed hidden z-[2000] left-0 top-0 w-full h-full overflow-auto">
-    <div class="flex justify-center items-start min-h-screen py-10">
+    <div class="flex justify-center items-center min-h-screen py-10">
       <div id="modal-main" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-6 pr-6 pb-6 w-[87vw] max-w-[87vw] opacity-100">
         <h2 class="text-3xl font-bold text-primary my-6">How to use these systems?</h2>
         <div>
@@ -198,7 +212,11 @@
         <div class="mt-6 mb-6">
           <h4 class="text-xl/8 font-bold text-primary">Ground Status</h4>
           <p class="text-lg/8 text-primary mb-4 text-wrap text-justify">The soil status will turn red and have <strong>POOR</strong> status only if the moisture value is less than 15% or more than 85% and if the pH value is less than 5.5 or more than 8.5. Otherwise, the soil status will turn green and have a <strong>GOOD</strong> status.</p>
-          <button id="close-modal" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>
+          <section class="flex flex-wrap justify-center items-center gap-4">
+            <button id="get-ph-data-modal" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Get Ph Data</button>
+            <button id="close-modal" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>
+            <button id="get-humidity-data-modal" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Get Humidity Data</button>
+          </section>
         </div>
       </div>
     </div>

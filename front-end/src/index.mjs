@@ -1,4 +1,4 @@
-import { openDb, saveHumidityDataToDb, savePhDataToDb, getHumidityDataFromDb, getPhDataFromDb } from './database.js';
+import { openDb, saveHumidityDataToDb, savePhDataToDb, getHumidityDataFromDb, getPhDataFromDb, downloadHumidityToCSV, downloadPhToCSV} from './database.js';
 
 const mqttHost = 'a2spluztzgsdhl-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
 const region = 'ap-southeast-1'; // contoh: ap-southeast-1
@@ -147,7 +147,7 @@ const setupWebSocket = () => {
       console.log('📨 Data diterima:', data);
 
       // Destructure data
-      const { topic, data: sensorData, chartData, timestamp } = data;
+      const { topic, data: sensorData, chartData, timestamp: timestampCloudRaw } = data;
       const { ph, humidity } = chartData || {};
 
       // Simpan data terbaru ke IndexedDB setelah di-render ke grafik
@@ -179,12 +179,22 @@ const setupWebSocket = () => {
         }
       }
 
-      const browserReceivedTimestamp = new Date(Date.now() + (7 * 60 * 60 * 1000));
-      const browserReceivedTimestampFix = browserReceivedTimestamp.toISOString();
-      const timestampNum = Number(timestamp);
-      const latencyMs = !isNaN(timestampNum)
-        ? Number(browserReceivedTimestamp) - timestampNum
+      // Waktu saat browser menerima data (epoch milidetik UTC)
+      const browserReceivedTimestampRaw = Date.now();
+
+      // Hitung Latency (dalam milidetik)
+      const latencyMs = !isNaN(Number(timestampCloudRaw))
+        ? browserReceivedTimestampRaw - Number(timestampCloudRaw)
         : 0;
+
+      // Konversi timestamp yang diterima dari cloud ke format ISOString untuk penyimpanan/display (opsional, bisa juga simpan raw)
+      // Pastikan timestampCloudRaw adalah angka sebelum dikonversi
+      const timestampCloudReceivedFix = !isNaN(Number(timestampCloudRaw))
+          ? new Date(Number(timestampCloudRaw) + (7 * 60 * 60 * 1000)).toISOString() // Konversi ke WIB ISO
+          : null;
+
+      // Konversi waktu browserReceived ke format ISOString (WIB)
+      const browserReceivedTimestampFix = new Date(browserReceivedTimestampRaw + (7 * 60 * 60 * 1000)).toISOString(); // Konversi ke WIB ISO
 
       // Data yang akan disimpan ke IndexedDB
       let recordHumidity;
@@ -194,7 +204,7 @@ const setupWebSocket = () => {
         if (sensorData.Kelembapan !== undefined && sensorData.Kelembapan !== null && !isNaN(parseFloat(sensorData.Kelembapan))) {
           // Simpan recordHumidity ke variabel global agar bisa diakses di luar fungsi
           window.latestRecordHumidity = {
-            timestampCloudReceived: timestamp,
+            timestampCloudReceived: timestampCloudReceivedFix,
             timestampBrowserReceived: browserReceivedTimestampFix,
             latency: parseFloat(latencyMs),
             humidityValue: parseFloat(sensorData.Kelembapan),
@@ -497,23 +507,123 @@ window.addEventListener('click', function (e) {
 //modal
 const modal1 = document.getElementById('modal-container-1');
 const modal2 = document.getElementById('modal-container-2');
+
+const modalConfirmContainer = document.getElementById('modal-confirm-download-container');
+const modalConfirmDownload = document.getElementById('modal-confirm-download-alert');
+
 const modalMain = document.getElementById('modal-main');
+const modalMainDownload = document.getElementById('modal-main-download');
+
 const infoButton = document.getElementById('info-button');
 const closeButton = document.getElementById('close-modal');
+
+const downloadDataButton = document.getElementById('download-data');
+const cancelDownloadButton = document.getElementById('cancel-download');
+
+const getPhDataModal = document.getElementById('get-ph-data-modal');
+const getHumidityDataModal = document.getElementById('get-humidity-data-modal');
+
+const contectDownloadModal = document.getElementById('content-download-modal');
+const titleDownloadModal = document.getElementById('title-download-modal');
+
+let currentDownloadType = null;
 
 infoButton.addEventListener('click', () => {
   modal1.classList.remove('hidden');
   modal2.classList.remove('hidden');
 });
+
+getPhDataModal.addEventListener('click', () => {
+  modalConfirmContainer.classList.remove('hidden');
+  modalConfirmDownload.classList.remove('hidden');
+  currentDownloadType = 'ph'; // Set jenis unduhan
+  titleDownloadModal.textContent = 'Download PH Data'; // Set teks langsung di sini
+  contectDownloadModal.textContent = 'Do you want to download the pH data?'; // Sesuaikan pertanyaan
+});
+
+getHumidityDataModal.addEventListener('click', () => {
+  modalConfirmContainer.classList.remove('hidden');
+  modalConfirmDownload.classList.remove('hidden');
+  currentDownloadType = 'humidity'; // Set jenis unduhan
+  titleDownloadModal.textContent = 'Download Humidity Data'; // Set teks langsung di sini
+  contectDownloadModal.textContent = 'Do you want to download the humidity data?'; // Sesuaikan pertanyaan
+});
+
+// Event listener untuk tombol "Download" utama di modal konfirmasi
+downloadDataButton.addEventListener('click', () => {
+  if (currentDownloadType === 'ph') {
+    downloadDataButton.disabled = true; // Nonaktifkan tombol download untuk mencegah klik ganda
+    contectDownloadModal.textContent = 'Mengunduh data pH...'; // Ubah teks modal konfirmasi
+    // Panggil fungsi downloadPhToCSV
+    setTimeout(async () => {
+      await downloadPhToCSV();
+    }, 4000); // Tambahkan delay 1,5 detik untuk memberikan waktu bagi pengguna melihat pesan
+    setTimeout(() => {
+      downloadDataButton.disabled = false; // Aktifkan kembali tombol download setelah selesai
+      contectDownloadModal.textContent = 'Data pH berhasil diunduh.'; 
+    }, 1500);
+  } else if (currentDownloadType === 'humidity') {
+    downloadDataButton.disabled = true; // Nonaktifkan tombol download untuk mencegah klik ganda
+    contectDownloadModal.textContent = 'Mengunduh data kelembapan...'; // Ubah teks modal konfirmasi
+    // Panggil fungsi downloadHumidityToCSV
+    setTimeout(async () => {
+      await downloadHumidityToCSV();
+    }, 4000); // Tambahkan delay 1,5 detik untuk memberikan waktu bagi pengguna melihat pesan
+    setTimeout(() => {
+      downloadDataButton.disabled = false; // Aktifkan kembali tombol download setelah selesai
+      contectDownloadModal.textContent = 'Data humidity berhasil diunduh.'; 
+    }, 1500);
+  }
+
+  // Sembunyikan modal konfirmasi setelah unduhan
+  setTimeout(() => {
+    modalConfirmContainer.classList.add('hidden');
+    modalConfirmDownload.classList.add('hidden');
+    currentDownloadType = null; // Reset setelah selesai
+  }, 5000);
+});
+
+cancelDownloadButton.addEventListener('click', () => {
+  modalConfirmContainer.classList.add('hidden');
+  modalConfirmDownload.classList.add('hidden');
+  currentDownloadType = null;
+});
+
 closeButton.addEventListener('click', () => {
   modal1.classList.add('hidden');
   modal2.classList.add('hidden');
 });
 
 window.addEventListener('click', function (e) {
-  if (!modalMain.contains(e.target) && !infoButton.contains(e.target)) {
-    modal1.classList.add('hidden');
-    modal2.classList.add('hidden');
+  // 1. Cek apakah modal konfirmasi download sedang terbuka (baik overlay maupun kontennya)
+  if (!modalConfirmContainer.classList.contains('hidden') && !modalConfirmDownload.classList.contains('hidden')) {
+    // Jika klik terjadi di luar modal konten download DAN bukan pada tombol yang terkait dengan modal download
+    // Penting: Sertakan juga tombol getPhDataModal dan getHumidityDataModal dalam pengecualian
+    // karena klik pada mereka akan membuka modal konfirmasi, jadi jangan langsung tutup
+    if (!modalMainDownload.contains(e.target) &&
+      e.target !== downloadDataButton &&
+      e.target !== cancelDownloadButton &&
+      e.target !== getPhDataModal && // Tambahkan ini
+      e.target !== getHumidityDataModal) { // Tambahkan ini
+      modalConfirmContainer.classList.add('hidden');
+      modalConfirmDownload.classList.add('hidden');
+      currentDownloadType = null; // Reset jika ditutup dengan klik luar
+    }
+  }
+  // 2. Jika modal konfirmasi download TIDAK terbuka, cek apakah modal info utama sedang terbuka
+  // (baik overlay maupun kontennya)
+  else if (!modal1.classList.contains('hidden') && !modal2.classList.contains('hidden')) {
+    // Jika klik terjadi di luar modal konten info DAN bukan pada tombol yang terkait dengan modal info
+    if (!modalMain.contains(e.target) &&
+      e.target !== downloadDataButton &&
+      e.target !== infoButton &&
+      e.target !== closeButton &&
+      e.target !== cancelDownloadButton &&
+      e.target !== getPhDataModal && // Ini juga penting jika tombol ini bisa memicu penutupan modal info
+      e.target !== getHumidityDataModal) { // Ini juga penting
+      modal1.classList.add('hidden');
+      modal2.classList.add('hidden');
+    }
   }
 });
 

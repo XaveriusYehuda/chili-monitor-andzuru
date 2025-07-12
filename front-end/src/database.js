@@ -42,15 +42,15 @@ export function openDb() {
 export function savePhDataToDb(data) {
   if (!db) {
 	console.warn('IndexedDB not open. Cannot save pH data.');
-	return;
+	  return;
   }
   if (!data || typeof data !== 'object') {
-	console.warn('Invalid pH data. Not saving to IndexedDB.');
-	return;
+	  console.warn('Invalid pH data. Not saving to IndexedDB.');
+	  return;
   }
   // Remove id if exists to avoid DataError
   if ('id' in data) {
-	delete data.id;
+	  delete data.id;
   }
 
   // Cek apakah data yang sama sudah ada
@@ -84,7 +84,7 @@ export function savePhDataToDb(data) {
   };
 
   request.onerror = (event) => {
-	console.error('Error checking for duplicate pH data in IndexedDB:', event.target.errorCode);
+	  console.error('Error checking for duplicate pH data in IndexedDB:', event.target.errorCode);
   };
 }
 
@@ -141,61 +141,191 @@ export function saveHumidityDataToDb(data) {
 // Fungsi untuk membaca semua data dari IndexedDB (opsional, jika Anda ingin menampilkan history)
 export function getHumidityDataFromDb(limit = 8) {
   return new Promise((resolve, reject) => {
-	if (!db) {
-	  console.warn('IndexedDB not open. Cannot get data.');
-	  resolve([]);
-	  return;
-	}
+    if (!db) {
+      console.warn('IndexedDB not open. Cannot get data.');
+      resolve([]);
+      return;
+    }
 
-	const transaction = db.transaction([STORE_NAME_1], 'readonly');
-	const objectStore = transaction.objectStore(STORE_NAME_1);
-	const request = objectStore.openCursor(null, 'prev'); // ambil dari data terbaru
-	const results = [];
+    const transaction = db.transaction([STORE_NAME_1], 'readonly');
+    const objectStore = transaction.objectStore(STORE_NAME_1);
+    const request = objectStore.openCursor(null, 'prev'); // ambil dari data terbaru
+    const results = [];
 
-	request.onsuccess = (event) => {
-	  const cursor = event.target.result;
-	  if (cursor && results.length < limit) {
-		results.push(cursor.value);
-		cursor.continue();
-	  } else {
-		resolve(results);
-	  }
-	};
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
 
-	request.onerror = (event) => {
-	  console.error('Error getting data from IndexedDB:', event.target.errorCode);
-	  reject(event.target.errorCode);
-	};
+    request.onerror = (event) => {
+      console.error('Error getting data from IndexedDB:', event.target.errorCode);
+      reject(event.target.errorCode);
+    };
   });
 }
 
 export function getPhDataFromDb(limit = 8) {
   return new Promise((resolve, reject) => {
-	if (!db) {
-	  console.warn('IndexedDB not open. Cannot get data.');
-	  resolve([]);
-	  return;
-	}
+    if (!db) {
+      console.warn('IndexedDB not open. Cannot get data.');
+      resolve([]);
+      return;
+    }
 
-	const transaction = db.transaction([STORE_NAME_2], 'readonly');
-	const objectStore = transaction.objectStore(STORE_NAME_2);
-	const request = objectStore.openCursor(null, 'prev'); // ambil dari data terbaru
-	const results = [];
+    const transaction = db.transaction([STORE_NAME_2], 'readonly');
+    const objectStore = transaction.objectStore(STORE_NAME_2);
+    const request = objectStore.openCursor(null, 'prev'); // ambil dari data terbaru
+    const results = [];
 
-	request.onsuccess = (event) => {
-	  const cursor = event.target.result;
-	  if (cursor && results.length < limit) {
-		results.push(cursor.value);
-		cursor.continue();
-	  } else {
-		resolve(results);
-	  }
-	};
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        
+      }
+    };
 
-	request.onerror = (event) => {
-	  console.error('Error getting data from IndexedDB:', event.target.errorCode);
-	  reject(event.target.errorCode);
-	};
+    request.onerror = (event) => {
+      console.error('Error getting data from IndexedDB:', event.target.errorCode);
+      reject(event.target.errorCode);
+    };
+  });
+}
+
+export function downloadPhToCSV(fileName = 'ph_data.csv') {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      console.warn('IndexedDB not open. Cannot get data.');
+      reject('IndexedDB not open'); // Reject promise if DB is not open
+      return;
+    }
+
+    const transaction = db.transaction([STORE_NAME_2], 'readonly');
+    const objectStore = transaction.objectStore(STORE_NAME_2);
+    const request = objectStore.openCursor();
+    let data = [];
+    let headers = [];
+    let isFirstRecord = true;
+    
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const record = cursor.value; // Ambil record dari cursor
+
+        if (isFirstRecord) {
+          headers = Object.keys(record);
+          data.push(headers.join(',')); // Tambahkan header ke data
+          isFirstRecord = false;
+        }
+
+        const row = headers.map(header => { 
+          let value = record[header];
+          if (value === null || typeof value === 'undefined') {
+            return '';
+          } else if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) { // Jika nilai adalah string dan mengandung koma, kutip ganda, atau baris baru, bungkus dengan kutip ganda
+            return `"${value.replace(/"/g, '""')}"`; // Escape double quotes
+          }
+          return value;
+        }).join(',');
+        data.push(row);
+
+        cursor.continue(); // lanjutkan ke record berikutnya
+      } else { 
+        console.log("semua data telah diiterasi");
+        const csvString = data.join('\n');
+
+        // Buat blob dan link download
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url); // bersihkan URL object
+
+        console.log(`Data exported to ${fileName}`);
+        resolve();
+      }
+    };
+
+    request.onerror = (event) => {
+      console.error('Error download data from IndexedDB:', event.target.errorCode);
+      reject(event.target.errorCode);
+    };
+  });
+}
+
+export function downloadHumidityToCSV(fileName = 'humidity_data.csv') {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      console.warn('IndexedDB not open. Cannot get data.');
+      reject('IndexedDB not open'); // Reject promise if DB is not open
+      return;
+    }
+
+    const transaction = db.transaction([STORE_NAME_1], 'readonly');
+    const objectStore = transaction.objectStore(STORE_NAME_1);
+    const request = objectStore.openCursor();
+    let data = [];
+    let headers = [];
+    let isFirstRecord = true;
+    
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const record = cursor.value; // Ambil record dari cursor
+
+        if (isFirstRecord) {
+          headers = Object.keys(record);
+          data.push(headers.join(',')); // Tambahkan header ke data
+          isFirstRecord = false;
+        }
+
+        const row = headers.map(header => { 
+          let value = record[header];
+          if (value === null || typeof value === 'undefined') {
+            return '';
+          } else if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) { // Jika nilai adalah string dan mengandung koma, kutip ganda, atau baris baru, bungkus dengan kutip ganda
+            return `"${value.replace(/"/g, '""')}"`; // Escape double quotes
+          }
+          return value;
+        }).join(',');
+        data.push(row);
+
+        cursor.continue(); // lanjutkan ke record berikutnya
+      } else { 
+        console.log("semua data telah diiterasi");
+        const csvString = data.join('\n');
+
+        // Buat blob dan link download
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url); // bersihkan URL object
+
+        console.log(`Data exported to ${fileName}`);
+        resolve();
+      }
+    };
+
+    request.onerror = (event) => {
+      console.error('Error download data from IndexedDB:', event.target.errorCode);
+      reject(event.target.errorCode);
+    };
   });
 }
 
