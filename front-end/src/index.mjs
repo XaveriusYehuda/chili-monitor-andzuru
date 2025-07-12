@@ -219,7 +219,7 @@ const setupWebSocket = () => {
         if (sensorData.Ph !== undefined && sensorData.Ph !== null && !isNaN(parseFloat(sensorData.Ph))) {
           // Simpan recordPh ke variabel global agar bisa diakses di luar fungsi
           window.latestRecordPh = {
-            timestampCloudReceived: timestamp,
+            timestampCloudReceived: timestampCloudReceivedFix,
             timestampBrowserReceived: browserReceivedTimestampFix,
             latency: parseFloat(latencyMs),
             phValue: parseFloat(sensorData.Ph),
