@@ -7,135 +7,142 @@ let db; // Variabel untuk menyimpan instance database
 
 // Fungsi untuk membuka IndexedDB
 export function openDb() {
-	return new Promise((resolve, reject) => {
-		const request = indexedDB.open(DB_NAME, DB_VERSION);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-		request.onerror = (event) => {
-			console.error('Error opening IndexedDB:', event.target.errorCode);
-			reject(event.target.errorCode);
-		};
+    request.onerror = (event) => {
+      console.error('Error opening IndexedDB:', event.target.errorCode);
+      reject(event.target.errorCode);
+    };
 
-		request.onsuccess = (event) => {
-			db = event.target.result;
-			console.log('IndexedDB opened successfully');
-			resolve(db);
-		};
+    request.onsuccess = (event) => {
+      db = event.target.result;
+      console.log('IndexedDB opened successfully');
+      resolve(db);
+    };
 
-		request.onupgradeneeded = (event) => {
-			const db = event.target.result;
-			// Buat object store untuk pH tanpa index tambahan
-			if (!db.objectStoreNames.contains(STORE_NAME_2)) {
-				db.createObjectStore(STORE_NAME_2, { keyPath: 'id', autoIncrement: true });
-				console.log(`Object store '${STORE_NAME_2}' created.`);
-			}
-			// Buat object store untuk kelembapan tanpa index tambahan
-			if (!db.objectStoreNames.contains(STORE_NAME_1)) {
-				db.createObjectStore(STORE_NAME_1, { keyPath: 'id', autoIncrement: true });
-				console.log(`Object store '${STORE_NAME_1}' created.`);
-			}
-		};
-	});
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      // Buat object store untuk pH tanpa index tambahan
+      if (!db.objectStoreNames.contains(STORE_NAME_2)) {
+        db.createObjectStore(STORE_NAME_2, { keyPath: 'id', autoIncrement: true });
+        console.log(`Object store '${STORE_NAME_2}' created.`);
+      }
+      // Buat object store untuk kelembapan tanpa index tambahan
+      if (!db.objectStoreNames.contains(STORE_NAME_1)) {
+        db.createObjectStore(STORE_NAME_1, { keyPath: 'id', autoIncrement: true });
+        console.log(`Object store '${STORE_NAME_1}' created.`);
+      }
+    };
+  });
 }
 
 // Fungsi untuk menyimpan data ke IndexedDB
 // Simpan data ke object store pH
 export function savePhDataToDb(data) {
   if (!db) {
-	console.warn('IndexedDB not open. Cannot save pH data.');
-	  return;
+    console.warn('IndexedDB not open. Cannot save pH data.');
+    return;
   }
   if (!data || typeof data !== 'object') {
-	  console.warn('Invalid pH data. Not saving to IndexedDB.');
-	  return;
+    console.warn('Invalid pH data. Not saving to IndexedDB.');
+    return;
   }
   // Remove id if exists to avoid DataError
   if ('id' in data) {
-	  delete data.id;
+    delete data.id;
   }
 
   // Cek apakah data yang sama sudah ada
   const transaction = db.transaction([STORE_NAME_2], 'readonly');
   const objectStore = transaction.objectStore(STORE_NAME_2);
   const request = objectStore.openCursor(null, 'prev');
-  let isDuplicate = false;
 
   request.onsuccess = (event) => {
-		const cursor = event.target.result;
-		if (cursor) {
-			if (cursor.value.phValue === data.phValue) {
-				isDuplicate = true;
-				return;
-			}
-			cursor.continue();
-		} else {
-			if (!isDuplicate) {
-				// Tidak ada data sama, simpan data
-				const writeTransaction = db.transaction([STORE_NAME_2], 'readwrite');
-				const writeObjectStore = writeTransaction.objectStore(STORE_NAME_2);
-				const addRequest = writeObjectStore.add(data);
-				addRequest.onsuccess = () => {
-					// console.log('pH data saved to IndexedDB:', data);
-				};
-				addRequest.onerror = (event) => {
-					console.error('Error saving pH data to IndexedDB:', event.target.errorCode);
-				};
-			}
-		}
+    const cursor = event.target.result;
+
+    // Jika ada data sebelumnya
+    if (cursor) {
+      const lastSavedPhValue = cursor.value.phValue;
+      
+      if (lastSavedPhValue === data.phValue) { // Cek apakah phValue yang akan disimpan sama dengan phValue record terakhir
+        console.warn('pH data is a duplicate of the immediately previous record. Not saving.');
+        return; // Hentikan fungsi, jangan simpan data
+      }
+    }
+
+    // Jika tidak ada data sebelumnya ATAU data sebelumnya berbeda,
+    // maka lanjutkan untuk menyimpan data baru
+    const writeTransaction = db.transaction([STORE_NAME_2], 'readwrite');
+    const writeObjectStore = writeTransaction.objectStore(STORE_NAME_2);
+    const addRequest = writeObjectStore.add(data);
+
+    addRequest.onsuccess = () => {
+      // console.log('pH data saved to IndexedDB:', data);
+      console.log('pH data successfully saved to IndexedDB.'); // Pesan konfirmasi
+    };
+    addRequest.onerror = (event) => {
+      console.error('Error saving pH data to IndexedDB:', event.target.errorCode);
+    };
   };
 
   request.onerror = (event) => {
-	  console.error('Error checking for duplicate pH data in IndexedDB:', event.target.errorCode);
+    console.error('Error checking for duplicate pH data in IndexedDB:', event.target.errorCode);
   };
 }
 
 // Simpan data ke object store kelembapan
 export function saveHumidityDataToDb(data) {
-	if (!db) {
-		console.warn('IndexedDB not open. Cannot save humidity data.');
-		return;
-	}
-	if (!data || typeof data !== 'object') {
-		console.warn('Invalid humidity data. Not saving to IndexedDB.');
-		return;
-	}
-	// Remove id if exists to avoid DataError
-	if ('id' in data) {
-		delete data.id;
-	}
+  if (!db) {
+    console.warn('IndexedDB not open. Cannot save humidity data.');
+    return;
+  }
+  if (!data || typeof data !== 'object') {
+    console.warn('Invalid humidity data. Not saving to IndexedDB.');
+    return;
+  }
+  // Remove id if exists to avoid DataError
+  if ('id' in data) {
+    delete data.id;
+  }
 
-	// Check for duplicate phValue before saving
-	const transaction = db.transaction([STORE_NAME_1], 'readonly');
-	const objectStore = transaction.objectStore(STORE_NAME_1);
-	const request = objectStore.openCursor(null, 'prev');
-	let isDuplicate = false;
+  // Check for duplicate humidityValue before saving
+  const transaction = db.transaction([STORE_NAME_1], 'readonly');
+  const objectStore = transaction.objectStore(STORE_NAME_1);
+  const request = objectStore.openCursor(null, 'prev');
 
-	request.onsuccess = (event) => {
-		const cursor = event.target.result;
-		if (cursor) {
-			if (cursor.value.humidityValue === data.humidityValue) {
-				isDuplicate = true;
-				return;
-			}
-			cursor.continue();
-		} else {
-			if (!isDuplicate) {
-				// No duplicate phValue found, save data
-				const writeTransaction = db.transaction([STORE_NAME_1], 'readwrite');
-				const writeObjectStore = writeTransaction.objectStore(STORE_NAME_1);
-				const addRequest = writeObjectStore.add(data);
-				addRequest.onsuccess = () => {
-					// console.log('Humidity data saved to IndexedDB:', data);
-				};
-				addRequest.onerror = (event) => {
-					console.error('Error saving humidity data to IndexedDB:', event.target.errorCode);
-				};
-			}
-		}
-	};
+  request.onsuccess = (event) => {
+    const cursor = event.target.result;
 
-	request.onerror = (event) => {
-		console.error('Error checking for duplicate phValue in IndexedDB:', event.target.errorCode);
-	};
+    // Jika ada data sebelumnya
+    if (cursor) {
+      const lastSavedHumidityValue = cursor.value.humidityValue;
+     
+      if (lastSavedHumidityValue === data.humidityValue) { // Cek apakah humidityValue yang akan disimpan sama dengan humidityValue record terakhir
+        console.warn('Humidity data is a duplicate of the immediately previous record. Not saving.');
+        return; // Hentikan fungsi, jangan simpan data
+      }
+    }
+
+    // Jika tidak ada data sebelumnya ATAU data sebelumnya berbeda,
+    // maka lanjutkan untuk menyimpan data baru
+    const writeTransaction = db.transaction([STORE_NAME_1], 'readwrite');
+    const writeObjectStore = writeTransaction.objectStore(STORE_NAME_1);
+    const addRequest = writeObjectStore.add(data);
+
+    addRequest.onsuccess = () => {
+      // console.log('Humidity data saved to IndexedDB:', data);
+      console.log('Humidity data successfully saved to IndexedDB.'); // Pesan konfirmasi
+    };
+    addRequest.onerror = (event) => {
+      console.error('Error saving Humidity data to IndexedDB:', event.target.errorCode);
+    };
+  };
+
+
+  request.onerror = (event) => {
+    console.error('Error checking for duplicate humidityValue in IndexedDB:', event.target.errorCode);
+  };
 }
 
 // Fungsi untuk membaca semua data dari IndexedDB (opsional, jika Anda ingin menampilkan history)
