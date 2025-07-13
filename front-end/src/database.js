@@ -65,8 +65,17 @@ export function savePhDataToDb(data) {
     if (cursor) {
       const lastSavedPhValue = cursor.value.phValue;
 
-      // Cek apakah phValue yang akan disimpan sama dengan phValue record terakhir
-      if (lastSavedPhValue === data.phValue) {
+      // Anda perlu membandingkan timestamp, bukan hanya nilai sensor
+      // Asumsi data.phDataReceivedAt adalah ISO string
+      const newTimestamp = data.phDataReceivedAt;
+      const lastTimestamp = lastSavedData.phDataReceivedAt;
+
+      // Bandingkan timestamp. Jika sama persis, anggap duplikat.
+      // Atau, jika Anda khawatir dengan presisi, bandingkan epoch dalam milidetik.
+      if (newTimestamp === lastTimestamp) { // Atau new Date(newTimestamp).getTime() === new Date(lastTimestamp).getTime()
+        console.warn('pH data with same timestamp already exists. Not saving.');
+        return;
+      } else if (lastSavedPhValue === data.phValue) { // Cek apakah phValue yang akan disimpan sama dengan phValue record terakhir
         console.warn('pH data is a duplicate of the immediately previous record. Not saving.');
         return; // Hentikan fungsi, jangan simpan data
       }
