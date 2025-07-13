@@ -1,8 +1,18 @@
 import { openDb, saveHumidityDataToDb, savePhDataToDb, getHumidityDataFromDb, getPhDataFromDb, downloadHumidityToCSV, downloadPhToCSV} from './database.js';
 
-const mqttHost = 'a2spluztzgsdhl-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
+// ini untuk akun xyehuda3@gmail.com
+// const mqttHost = 'a2spluztzgsdhl-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
+
+// ini untuk akun kutusapi99@gmail.com
+const mqttHost = 'ae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
+
 const region = 'ap-southeast-1'; // contoh: ap-southeast-1
-const identityPoolId = 'ap-southeast-1:e9f502ea-58c5-459a-bfa3-3ce6e1fc9bff'; // contoh: ap-southeast-1:xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx
+
+// ini untuk akun xyehuda3@gmail.com
+// const identityPoolId = 'ap-southeast-1:e9f502ea-58c5-459a-bfa3-3ce6e1fc9bff'; // contoh: ap-southeast-1:xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx
+
+// ini untuk akun kutusapi99@gmail.com
+const identityPoolId = 'ap-southeast-1:66f016b1-04c1-4719-8774-bf55d732f161'; // contoh: ap-southeast-1:xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx
 
 // Konfigurasi Amplify
 AWS.config.region = region;
@@ -130,7 +140,7 @@ const setupWebSocket = () => {
     return;
   }
 
-  const wsUrl = "wss://chili-monitor.andzuru.space";
+  const wsUrl = "wss://chili-monitor-data.andzuru.space";
 
   ws = new WebSocket(wsUrl);
 
