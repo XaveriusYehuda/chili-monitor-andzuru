@@ -312,7 +312,7 @@ function broadcastLatestCacheData() {
       Ph: latestPh,
       Kelembapan: latestHumidity
     },
-    timestamp: jakartaTime,
+    timestamp: Date.now(),
     chartData: {
       ph: extractChartData(phData),
       humidity: extractChartData(humidityData)
