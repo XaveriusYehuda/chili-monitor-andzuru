@@ -110,11 +110,6 @@ function addDataToCache(nilaiSensor, dataItem) {
 }
 
 // Client WebSocket ke server eksternal (AWS)
-
-// ini untuk akun xyehuda3@gmail.com
-// const wsExternalUrl  = 'wss://0p3brxy598.execute-api.ap-southeast-1.amazonaws.com/production';
-
-// ini untuk akun kutusapi99@gmail.com
 const wsExternalUrl  = 'wss://xyfg4ic2ii.execute-api.ap-southeast-1.amazonaws.com/production/';
 
 let wsExternal;
