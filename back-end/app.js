@@ -85,28 +85,42 @@ function addDataToCache(nilaiSensor, dataItem) {
   const cache = sensorDataCache.get(nilaiSensor);
   const normalizedTimestamp = normalizeTimestamp(dataItem.timestamp);
 
-  // Periksa apakah ada data yang sama persis (timestamp dan value)
-  const isActuallyNewData = !cache.some(item =>
-    item.timestamp === normalizedTimestamp && item.value === normalizedValue
-  );
+  cache.push({
+      timestamp: normalizedTimestamp,
+      value: normalizedValue
+  });
 
-  if (isActuallyNewData) {
-    // Jika data baru, tambahkan
-    cache.push({
-        timestamp: normalizedTimestamp,
-        value: normalizedValue
-    });
-    cache.sort((a, b) => a.timestamp - b.timestamp); // Pastikan tetap terurut
+  cache.sort((a, b) => a.timestamp - b.timestamp); // Pastikan tetap terurut
 
-    if (cache.length > 10) {
-        cache.shift(); // FIFO
-    }
-    // console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);
-    // Panggil debounced broadcast hanya jika ada data baru yang ditambahkan
-    debouncedBroadcastLatestCacheData();
-  } else {
-    // console.log(`Data duplikat terdeteksi untuk ${nilaiSensor}, tidak disimpan.`);
+  if (cache.length > 10) {
+      cache.shift(); // FIFO
   }
+  // console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);
+  // Panggil debounced broadcast hanya jika ada data baru yang ditambahkan
+  debouncedBroadcastLatestCacheData();
+
+  // Periksa apakah ada data yang sama persis (timestamp dan value)
+  // const isActuallyNewData = !cache.some(item =>
+  //   // item.timestamp === normalizedTimestamp && item.value === normalizedValue
+  // );
+
+  // if (isActuallyNewData) {
+  //   // Jika data baru, tambahkan
+  //   cache.push({
+  //       timestamp: normalizedTimestamp,
+  //       value: normalizedValue
+  //   });
+  //   cache.sort((a, b) => a.timestamp - b.timestamp); // Pastikan tetap terurut
+
+  //   if (cache.length > 10) {
+  //       cache.shift(); // FIFO
+  //   }
+  //   // console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);
+  //   // Panggil debounced broadcast hanya jika ada data baru yang ditambahkan
+  //   debouncedBroadcastLatestCacheData();
+  // } else {
+  //   // console.log(`Data duplikat terdeteksi untuk ${nilaiSensor}, tidak disimpan.`);
+  // }
 }
 
 // Client WebSocket ke server eksternal (AWS)
@@ -256,7 +270,7 @@ function connectAwsWebSocket() {
           };
 
           if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
-              addDataToCache(nilaiSensor, simplifiedData);
+              // addDataToCache(nilaiSensor, simplifiedData);
           }
         });
         // Tampilkan isi cache
