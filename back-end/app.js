@@ -270,7 +270,7 @@ function connectAwsWebSocket() {
           };
 
           if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
-              // addDataToCache(nilaiSensor, simplifiedData);
+              addDataToCache(nilaiSensor, simplifiedData);
           }
         });
         // Tampilkan isi cache
