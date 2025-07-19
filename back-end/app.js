@@ -394,7 +394,7 @@ mqttService.setMessageHandler((topic, payload) => {
     }
 
     // Setelah menambahkan data MQTT ke cache, baru broadcast dari cache
-    broadcastLatestCacheData();
+    // broadcastLatestCacheData();
 
     // const message = {
     //   topic,
