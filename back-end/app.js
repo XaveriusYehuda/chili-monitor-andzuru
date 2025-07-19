@@ -57,7 +57,7 @@ function normalizeTimestamp(timestamp) {
 
 // Debounce function
 let broadcastTimeout;
-const DEBOUNCE_DELAY = 200; // milliseconds
+const DEBOUNCE_DELAY = 50; // milliseconds
 
 function debouncedBroadcastLatestCacheData() {
   clearTimeout(broadcastTimeout);
@@ -394,7 +394,7 @@ mqttService.setMessageHandler((topic, payload) => {
     }
 
     // Setelah menambahkan data MQTT ke cache, baru broadcast dari cache
-    // broadcastLatestCacheData();
+    broadcastLatestCacheData();
 
     // const message = {
     //   topic,
