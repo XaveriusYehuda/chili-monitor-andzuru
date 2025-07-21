@@ -270,7 +270,7 @@ function connectAwsWebSocket() {
           };
 
           if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
-              // addDataToCache(nilaiSensor, simplifiedData);
+              addDataToCache(nilaiSensor, simplifiedData);
           }
         });
         // Tampilkan isi cache
@@ -390,11 +390,11 @@ mqttService.setMessageHandler((topic, payload) => {
     }
 
     if (sensorTypeFromTopic && !isNaN(sensorValue) && sensorValue !== null && sensorValue !== undefined) {
-        addDataToCache(sensorTypeFromTopic, { timestamp: timestamp, value: sensorValue });
+        // addDataToCache(sensorTypeFromTopic, { timestamp: timestamp, value: sensorValue });
     }
 
     // Setelah menambahkan data MQTT ke cache, baru broadcast dari cache
-    broadcastLatestCacheData();
+    // broadcastLatestCacheData();
 
     // const message = {
     //   topic,
