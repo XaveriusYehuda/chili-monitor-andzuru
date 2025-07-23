@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now, expires: 24 * 60 * 60 }
 });
 
 userSchema.pre('save', async function(next) {
@@ -605,7 +605,7 @@ const authenticateToken = (req, res, next) => {
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error("JWT Verification Error:", err.message);
-      return res.sendStatus(403);
+      return res.status(403).json({ success: false, message: "Invalid or expired token." });
     }
     req.user = user;
     next();
@@ -642,7 +642,7 @@ app.post('/api/register-auto-login', async (req, res) => {
     await newUser.save();
 
     // Buat JWT untuk pengguna baru yang sudah terdaftar
-    const token = jwt.sign({ id: newUser._id, username: newUser.username }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Token expires in 1 hour
+    const token = jwt.sign({ id: newUser._id, username: newUser.username }, process.env.JWT_SECRET, { expiresIn: '1d' }); // Token expires in 1 hour
 
     res.status(201).json({
       success: true,
@@ -698,7 +698,7 @@ app.post('/api/save-subscription', authenticateToken, async (req, res) => {
       const payload = JSON.stringify({
         title: 'Berlangganan Berhasil',
         body: 'Anda akan menerima notifikasi terbaru dari kami',
-        icon: '/icon.png'
+        icon: '/pwa-192x192.png'
       });
       
       await webpush.sendNotification({ endpoint, keys }, payload);
@@ -827,6 +827,19 @@ app.post('/api/broadcast-notification', authenticateToken, async (req, res) => {
       message: 'Gagal mengirim notifikasi',
       error: error.message
     });
+  }
+});
+
+app.delete('/api/clean-expired-users', async (req, res) => {
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 jam yang lalu
+    // Hapus user yang createdAt-nya lebih dari 24 jam yang lalu
+    const result = await User.deleteMany({ createdAt: { $lt: twentyFourHoursAgo } });
+    console.log(`Menghapus ${result.deletedCount} user yang kedaluwarsa.`);
+    res.json({ success: true, deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error('Error cleaning expired users:', error);
+    res.status(500).json({ success: false, message: 'Failed to clean expired users.', error: error.message });
   }
 });
 

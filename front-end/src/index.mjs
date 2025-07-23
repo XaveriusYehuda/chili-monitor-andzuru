@@ -489,8 +489,26 @@ async function setupPushNotification() {
   }
 }
 
-async function registerAndAutoLogin(username, email, password) {
+function generateRandomString(length = 8) {
+  return Math.random().toString(36).substring(2, 2 + length);
+}
+
+async function registerAndAutoLogin(attempt = 0) {
+  const maxAttempts = 5; // Batasi percobaan untuk menghindari loop tak terbatas
+
+  if (attempt >= maxAttempts) {
+    console.error("Failed to auto-register after multiple attempts due to duplicate username/email.");
+    alert("Gagal melakukan registrasi otomatis setelah beberapa percobaan. Silakan coba lagi nanti.");
+    return false;
+  }
+
+  const randomString = generateRandomString(6);
+  const username = `user${randomString}`;
+  const email = `user${randomString}@example.com`; // Gunakan example.com atau domain eksperimen Anda
+  const password = "password123"; // Tetap diingat ini untuk eksperimen!
+
   try {
+    console.log(`Attempting to register with: Username=${username}, Email=${email}`);
     const response = await fetch('https://chili-monitor-data.andzuru.space/api/register-auto-login', { // Sesuaikan URL backend Anda
       method: 'POST',
       headers: {
@@ -504,13 +522,14 @@ async function registerAndAutoLogin(username, email, password) {
     if (response.ok && data.success) {
       console.log('Registration successful, token received:', data.token);
       localStorage.setItem('userToken', data.token); // Simpan token di localStorage
+      localStorage.setItem('userToken_createdAt', Date.now()); // Simpan waktu pembuatan token
       alert('Registrasi berhasil! Anda telah otomatis login.');
-      // Lakukan tindakan lain setelah login (misalnya, perbarui UI, muat data pengguna)
-      // Pastikan fungsi subscribe push notification dipanggil setelah token tersedia
-      await setupPushNotification(); // Cek dan atur langganan push notification lagi
       return true;
+    } else if (response.status === 409) { // Konflik, username/email sudah ada
+      console.warn('Username or email already exists. Retrying with new random values.');
+      return registerAndAutoLogin(attempt + 1); // Coba lagi dengan data baru
     } else {
-      console.error('Registration failed:', data.message || 'Unknown error');
+      console.error('Registration failed:', data.message || 'Unknown error', data);
       alert(`Registrasi gagal: ${data.message || 'Terjadi kesalahan.'}`);
       return false;
     }
@@ -518,6 +537,31 @@ async function registerAndAutoLogin(username, email, password) {
     console.error('Error during registration:', error);
     alert('Terjadi kesalahan saat registrasi.');
     return false;
+  }
+}
+
+// Fungsi untuk memverifikasi token di frontend (valid secara format & belum kedaluwarsa)**
+function isTokenLocallyValid(token) {
+  if (!token) return false;
+  try {
+    // Memecah JWT (header.payload.signature)
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    const payload = JSON.parse(atob(parts[1])); // Decode payload Base64
+
+    // Periksa expiration time (exp) jika ada
+    if (payload.exp) {
+      const currentTime = Math.floor(Date.now() / 1000); // Waktu saat ini dalam detik Unix
+      if (payload.exp < currentTime) {
+        console.log("Token expired locally.");
+        return false; // Token sudah kedaluwarsa
+      }
+    }
+    return true; // Token valid secara format dan belum kedaluwarsa
+  } catch (e) {
+    console.error("Error decoding or validating token locally:", e);
+    return false; // Token tidak valid secara format
   }
 }
 
@@ -529,26 +573,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   }).catch(err => console.error('Failed to open IndexedDB:', err));
 
   let userToken = localStorage.getItem('userToken');
-  if (!userToken) {
-    console.log("No user token found. Attempting to auto-register and login for experiment.");
-    // Anda bisa meminta input username/email/password di sini atau menggunakan nilai default untuk eksperimen
-    const defaultUsername = "experimentaluser";
-    const defaultEmail = "experimental@example.com";
-    const defaultPassword = "password123"; // Jangan pernah gunakan password default di produksi!
+  let tokenCreatedAt = localStorage.getItem('userToken_createdAt');
+  const twentyFourHours = 24 * 60 * 60 * 1000; // 24 jam dalam milidetik
+
+  // Lakukan cross-check token di localStorage: valid secara format dan belum berusia 24 jam
+  if (userToken && isTokenLocallyValid(userToken) && (Date.now() - tokenCreatedAt < twentyFourHours)) {
+    console.log("Valid user token found in localStorage:", userToken);
+  } else {
+    console.log("No valid user token found or token expired/too old. Attempting to auto-register and login.");
+    localStorage.removeItem('userToken'); // Hapus token lama/invalid
+    localStorage.removeItem('userToken_createdAt'); // Hapus waktu pembuatan token lama/invalid
 
     // Coba registrasi dan auto-login
-    const registered = await registerAndAutoLogin(defaultUsername, defaultEmail, defaultPassword);
+    const registered = await registerAndAutoLogin();
     if (registered) {
       userToken = localStorage.getItem('userToken'); // Dapatkan token yang baru disimpan
-      console.log("Auto-registration and login successful. Token:", userToken);
+      console.log("Auto-registration and login successful. New Token:", userToken);
     } else {
-      console.error("Auto-registration and login failed.");
-      // Handle jika auto-registrasi gagal (misalnya, username/email sudah ada)
-      // Anda mungkin perlu memberi tahu pengguna untuk login secara manual atau mencoba nama lain
+      console.error("Auto-registration and login failed. User cannot proceed without a token.");
+      alert("Gagal mendapatkan sesi pengguna. Fungsi tertentu mungkin tidak bekerja.");
+      // Anda mungkin ingin menonaktifkan fitur yang memerlukan token di sini
+      return; // Hentikan eksekusi lebih lanjut jika tidak ada token
     }
-  } else {
-    console.log("User token found in localStorage:", userToken);
   }
+
+  // Panggil rute backend untuk membersihkan user yang kedaluwarsa secara periodik (opsional, bisa juga via cron job)
+  // Untuk eksperimen, kita panggil saat load halaman. Di produksi, sebaiknya diatur di server.
+  // fetch('https://chili-monitor-data.andzuru.space/api/clean-expired-users', { method: 'DELETE' })
+  //   .then(res => res.json())
+  //   .then(data => console.log('Expired user cleanup result:', data))
+  //   .catch(err => console.error('Error cleaning expired users:', err));
+
 
   // Daftarkan Service Worker dan setup notifikasi push
   await setupPushNotification();
@@ -559,15 +614,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Event listener untuk tombol Subscribe
   if (subscribeBtn) {
     subscribeBtn.addEventListener('click', async () => {
-      const currentToken = localStorage.getItem('userToken'); // Dapatkan token dari localStorage
+      const currentToken = localStorage.getItem('userToken');
       if (!currentToken) {
-        alert("Silakan login atau daftar terlebih dahulu untuk berlangganan notifikasi.");
+        alert("Sesi pengguna tidak ditemukan. Harap segarkan halaman untuk mendapatkan sesi baru.");
         return;
       }
 
       const status = await getPushSubscriptionStatus();
       if (status.subscribed) {
         try {
+          // Token di sini sudah dipastikan valid oleh flow sebelumnya
           await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, currentToken);
           await status.subscriptionObject.unsubscribe();
           console.log('Successfully unsubscribed!');
@@ -585,6 +641,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             userVisibleOnly: true,
             applicationServerKey: applicationServerKey,
           });
+          // Token di sini sudah dipastikan valid oleh flow sebelumnya
           await sendSubscriptionToBackend(subscription, currentToken);
           console.log('Successfully subscribed!');
           updateSubscriptionButtons(true);
@@ -599,9 +656,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (subscribeBtnMobile) {
     subscribeBtnMobile.addEventListener('click', async () => {
-      const currentToken = localStorage.getItem('userToken'); // Dapatkan token dari localStorage
+      const currentToken = localStorage.getItem('userToken');
       if (!currentToken) {
-        alert("Silakan login atau daftar terlebih dahulu untuk berlangganan notifikasi.");
+        alert("Sesi pengguna tidak ditemukan. Harap segarkan halaman untuk mendapatkan sesi baru.");
         return;
       }
 
