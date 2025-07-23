@@ -491,7 +491,7 @@ async function setupPushNotification() {
 
 async function registerAndAutoLogin(username, email, password) {
   try {
-    const response = await fetch('http://localhost:3000/api/register-auto-login', { // Sesuaikan URL backend Anda
+    const response = await fetch('https://chili-monitor-data.andzuru.space/api/register-auto-login', { // Sesuaikan URL backend Anda
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
