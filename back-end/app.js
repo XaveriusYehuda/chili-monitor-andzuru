@@ -949,10 +949,11 @@ function checkAndSendAlertNotification(sensorType, value) {
 
 // Fungsi untuk menandai apakah pompa sedang aktif atau tidak
 function isPumpActive() {
-  const hour = date.getHours(); // Gunakan timestamp saat ini untuk normalisasi
-  const minute = date.getMinutes(); // Gunakan timestamp saat ini untuk normalisasi
-  const second = date.getSecond(); // Gunakan timestamp saat ini untuk normalisasi
-  return hour == 7 && minute == 0 && second == 0;
+  const now = new Date(); // Inisialisasi objek Date baru untuk waktu saat ini
+  const hour = now.getHours(); // Gunakan instance 'now'
+  const minute = now.getMinutes(); // Gunakan instance 'now'
+  const second = now.getSeconds(); // Gunakan instance 'now'
+  return hour === 7 && minute === 0 && second === 0;
   
   const humidityData = sensorDataCache.get('device/humidity') || [];
   if (humidityData.length === 0) return false; // Tidak ada data, anggap pompa tidak aktif
