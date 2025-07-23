@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const webpush = require('web-push');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken'); // Add this line
+const bcrypt = require('bcrypt'); // Add this line
 require('dotenv').config(); // npm install dotenv
 
 const app = express();
@@ -32,6 +33,23 @@ const subscriptionSchema = new mongoose.Schema({
 });
 
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
+
+// Define schema and model here, outside the connection function
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 10); // Hash password before saving
+  }
+  next();
+});
+
+const User = mongoose.model('User', userSchema);
 
 async function connectToMongoDB() {
   try {
@@ -573,17 +591,27 @@ webpush.setVapidDetails(
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
-  if (!token) return res.sendStatus(401);
+
+  if (!token) {
+    console.warn("Authentication: No token provided.");
+    return res.sendStatus(401);
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET is not defined!");
+    return res.status(500).json({ success: false, message: "Server configuration error: JWT_SECRET not set." });
+  }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
+    if (err) {
+      console.error("JWT Verification Error:", err.message);
+      return res.sendStatus(403);
+    }
     req.user = user;
     next();
   });
 };
 
-// Helper function untuk decode base64
 // app.js
 function base64ToUint8Array(base64String) {
   // No padding needed with Buffer, it handles it
@@ -594,6 +622,39 @@ function base64ToUint8Array(base64String) {
 // Route untuk mendapatkan public key
 app.get('/api/vapidPublicKey', (req, res) => {
   res.send(vapidKeys.publicKey);
+});
+
+app.post('/api/register-auto-login', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Username, email, and password are required.' });
+    }
+
+    // Cek apakah username atau email sudah terdaftar
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'Username or email already exists.' });
+    }
+
+    const newUser = new User({ username, email, password });
+    await newUser.save();
+
+    // Buat JWT untuk pengguna baru yang sudah terdaftar
+    const token = jwt.sign({ id: newUser._id, username: newUser.username }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Token expires in 1 hour
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful. User automatically logged in.',
+      token: token, // Kirim token ke frontend
+      user: { id: newUser._id, username: newUser.username, email: newUser.email }
+    });
+
+  } catch (error) {
+    console.error('Error during registration:', error);
+    res.status(500).json({ success: false, message: 'Registration failed.', error: error.message });
+  }
 });
 
 // Route untuk menyimpan subscription
@@ -665,7 +726,7 @@ app.post('/api/send-notification', async (req, res) => {
   const payload = JSON.stringify({
     title: title || 'Notifikasi Default',
     body: body || 'Ini adalah isi notifikasi default',
-    icon: '/icon.png'
+    icon: '/pwa-192x192.png'
   });
   
   try {
@@ -745,7 +806,7 @@ app.post('/api/broadcast-notification', authenticateToken, async (req, res) => {
     }
 
     const subscriptions = await Subscription.find({});
-    const payload = JSON.stringify({ title, body, icon: '/icon.png' });
+    const payload = JSON.stringify({ title, body, icon: '/pwa-192x192.png' });
     
     const results = await Promise.all(
       subscriptions.map(sub => 

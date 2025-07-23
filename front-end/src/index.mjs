@@ -489,12 +489,66 @@ async function setupPushNotification() {
   }
 }
 
+async function registerAndAutoLogin(username, email, password) {
+  try {
+    const response = await fetch('http://localhost:3000/api/register-auto-login', { // Sesuaikan URL backend Anda
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, email, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log('Registration successful, token received:', data.token);
+      localStorage.setItem('userToken', data.token); // Simpan token di localStorage
+      alert('Registrasi berhasil! Anda telah otomatis login.');
+      // Lakukan tindakan lain setelah login (misalnya, perbarui UI, muat data pengguna)
+      // Pastikan fungsi subscribe push notification dipanggil setelah token tersedia
+      await setupPushNotification(); // Cek dan atur langganan push notification lagi
+      return true;
+    } else {
+      console.error('Registration failed:', data.message || 'Unknown error');
+      alert(`Registrasi gagal: ${data.message || 'Terjadi kesalahan.'}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error during registration:', error);
+    alert('Terjadi kesalahan saat registrasi.');
+    return false;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   setupWebSocket();
   setupMQTT();
 
   openDb().then(() => {
   }).catch(err => console.error('Failed to open IndexedDB:', err));
+
+  let userToken = localStorage.getItem('userToken');
+  if (!userToken) {
+    console.log("No user token found. Attempting to auto-register and login for experiment.");
+    // Anda bisa meminta input username/email/password di sini atau menggunakan nilai default untuk eksperimen
+    const defaultUsername = "experimentaluser";
+    const defaultEmail = "experimental@example.com";
+    const defaultPassword = "password123"; // Jangan pernah gunakan password default di produksi!
+
+    // Coba registrasi dan auto-login
+    const registered = await registerAndAutoLogin(defaultUsername, defaultEmail, defaultPassword);
+    if (registered) {
+      userToken = localStorage.getItem('userToken'); // Dapatkan token yang baru disimpan
+      console.log("Auto-registration and login successful. Token:", userToken);
+    } else {
+      console.error("Auto-registration and login failed.");
+      // Handle jika auto-registrasi gagal (misalnya, username/email sudah ada)
+      // Anda mungkin perlu memberi tahu pengguna untuk login secara manual atau mencoba nama lain
+    }
+  } else {
+    console.log("User token found in localStorage:", userToken);
+  }
 
   // Daftarkan Service Worker dan setup notifikasi push
   await setupPushNotification();
@@ -504,17 +558,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Event listener untuk tombol Subscribe
   if (subscribeBtn) {
-    subscribeBtn.addEventListener('click', async () => { //
-      const status = await getPushSubscriptionStatus(); //
-      // Dummy token, ganti dengan token autentikasi pengguna asli jika ada
-      const userToken = 'YOUR_USER_AUTH_TOKEN'; // <<< GANTI DENGAN TOKEN AUTH ASLI JIKA ADA
-      if (status.subscribed) { //
+    subscribeBtn.addEventListener('click', async () => {
+      const currentToken = localStorage.getItem('userToken'); // Dapatkan token dari localStorage
+      if (!currentToken) {
+        alert("Silakan login atau daftar terlebih dahulu untuk berlangganan notifikasi.");
+        return;
+      }
+
+      const status = await getPushSubscriptionStatus();
+      if (status.subscribed) {
         try {
-          await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, userToken); //
-          // Setelah berhasil unsubscribe dari backend, lakukan unsubscribe di browser
-          await status.subscriptionObject.unsubscribe(); //
+          await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, currentToken);
+          await status.subscriptionObject.unsubscribe();
           console.log('Successfully unsubscribed!');
-          updateSubscriptionButtons(false); //
+          updateSubscriptionButtons(false);
           alert('You have successfully unsubscribed from push notifications.');
         } catch (error) {
           console.error('Error unsubscribing:', error);
@@ -523,14 +580,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         try {
           const registration = await navigator.serviceWorker.ready;
-          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY); //
-          const subscription = await registration.pushManager.subscribe({ //
-            userVisibleOnly: true, //
-            applicationServerKey: applicationServerKey, //
+          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey,
           });
-          await sendSubscriptionToBackend(subscription, userToken); //
+          await sendSubscriptionToBackend(subscription, currentToken);
           console.log('Successfully subscribed!');
-          updateSubscriptionButtons(true); //
+          updateSubscriptionButtons(true);
           alert('You have successfully subscribed to push notifications!');
         } catch (error) {
           console.error('Error subscribing:', error);
@@ -540,18 +597,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Event listener untuk tombol Subscribe Mobile (jika Anda ingin logika yang sama)
   if (subscribeBtnMobile) {
-    subscribeBtnMobile.addEventListener('click', async () => { //
-      // Logika sama dengan tombol subscribe utama
-      const status = await getPushSubscriptionStatus(); //
-      const userToken = 'YOUR_USER_AUTH_TOKEN'; // <<< GANTI DENGAN TOKEN AUTH ASLI JIKA ADA
-      if (status.subscribed) { //
+    subscribeBtnMobile.addEventListener('click', async () => {
+      const currentToken = localStorage.getItem('userToken'); // Dapatkan token dari localStorage
+      if (!currentToken) {
+        alert("Silakan login atau daftar terlebih dahulu untuk berlangganan notifikasi.");
+        return;
+      }
+
+      const status = await getPushSubscriptionStatus();
+      if (status.subscribed) {
         try {
-          await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, userToken); //
-          await status.subscriptionObject.unsubscribe(); //
+          await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, currentToken);
+          await status.subscriptionObject.unsubscribe();
           console.log('Successfully unsubscribed (Mobile)!');
-          updateSubscriptionButtons(false); //
+          updateSubscriptionButtons(false);
           alert('You have successfully unsubscribed from push notifications.');
         } catch (error) {
           console.error('Error unsubscribing (Mobile):', error);
@@ -560,14 +620,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         try {
           const registration = await navigator.serviceWorker.ready;
-          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY); //
-          const subscription = await registration.pushManager.subscribe({ //
-            userVisibleOnly: true, //
-            applicationServerKey: applicationServerKey, //
+          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey,
           });
-          await sendSubscriptionToBackend(subscription, userToken); //
+          await sendSubscriptionToBackend(subscription, currentToken);
           console.log('Successfully subscribed (Mobile)!');
-          updateSubscriptionButtons(true); //
+          updateSubscriptionButtons(true);
           alert('You have successfully subscribed to push notifications!');
         } catch (error) {
           console.error('Error subscribing (Mobile):', error);
@@ -577,6 +637,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+
 
 // Update grafik pH menggunakan data dari array phFromDb
 async function updateDataPhFromDb() {
