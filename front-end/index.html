@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="./src/styles.css" rel="stylesheet">
-  <link rel="icon" href="./src/img/fix4.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="/32x32.png" sizes="32x32" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1481.0.min.js"></script>
   <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
@@ -30,6 +30,9 @@
               <div class="hidden lg:flex mx-4 py-2 text-base text-primary hover:text-tersier md:text-lg lg:text-xl">
                 <a href="#dashboard">Dashboard</a>
               </div>
+              <button id="subscribeBtn" class="hidden lg:flex mx-4 py-2 text-base text-primary hover:text-tersier md:text-lg lg:text-xl">
+                Subscribe
+              </button>
             </div>
             <button id="hamburger" name="hamburger" type="button" class="absolute right-6 block lg:hidden">
               <span class="my-2 block h-[2px] w-[30px] bg-primary origin-top-left transition duration-300 ease-in-out"></span>
@@ -37,15 +40,18 @@
               <span class="my-2 block h-[2px] w-[30px] bg-primary origin-bottom-left transition duration-300 ease-in-out"></span>
             </button>
           </div>
-          <img src="src/img/blob.svg" class="absolute scale-95 md:scale-180 lg:scale-260 z-20 rotate-z-30 -left-13 md:left-0 lg:left-14 lg:top-10">
-          <img src="src/img/blob.svg" class="absolute scale-140 md:scale-240 lg:scale-330 2xl:scale-400 z-20 -rotate-z-40 -right-8 -top-10 md:-right-4 md:-top-5 lg:top-0">
+          <img src="/blob.svg" class="absolute scale-95 md:scale-180 lg:scale-260 z-20 rotate-z-30 -left-13 md:left-0 lg:left-14 lg:top-10">
+          <img src="/blob.svg" class="absolute scale-140 md:scale-240 lg:scale-330 2xl:scale-400 z-20 -rotate-z-40 -right-8 -top-10 md:-right-4 md:-top-5 lg:top-0">
           <nav id="nav-menu" class="absolute right-8 top-15 hidden w-full max-w-[180px] rounded-lg bg-secondary py-2 z-[50] shadow-lg border-2 border-primary">
             <ul class="block">
               <li class="group">
-                <a href="#home" class="mx-4 flex py-2 text-base text-primary group-hover:text-tersier md:text-lg">About Us</a>
+                <a href="#home" class="mx-4 my-2 flex py-2 justify-self-center text-base text-primary group-hover:text-tersier md:text-lg">About Us</a>
               </li>
               <li class="group">
-                <a href="#dashboard" class="mx-4 flex py-2 text-base text-primary group-hover:text-tersier md:text-lg">Dashboard</a>
+                <a href="#dashboard" class="mx-4 my-2 flex py-2 justify-self-center text-base text-primary group-hover:text-tersier md:text-lg">Dashboard</a>
+              </li>
+              <li class="group">
+                <button id="subscribeBtnMobile" class="mx-4 my-2 flex py-2 justify-self-center text-base text-primary group-hover:text-tersier md:text-lg">Subscribe</button>
               </li>
             </ul>
           </nav>
@@ -84,11 +90,11 @@
           </div>
         </div>
         <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-3 shadow-tersier rounded-[40px] h-[120px] justify-center content-center 2xl:h-8/10">
-          <div class="flex flex-nowrap lg:flex-wrap justify-center items-center self-center mx-5">
-            <h3 class="text-2xl flex-1/2 text-primary lg:order-2 2xl:text-2xl lg:text-lg font-semibold 2xl:order-1 text-center md:text-3xl">
+          <div class="flex flex-nowrap lg:flex-wrap justify-center items-center self-center lg:mx-2 mx-5 2xl:h-full">
+            <h3 class="text-2xl flex-1/2 lg:w-full text-primary lg:order-2 2xl:text-2xl lg:text-lg font-semibold 2xl:order-1 text-center md:text-3xl">
               Soil PH Level
             </h3>
-            <h1 id="phValue" class="text-6xl md:text-7xl flex-1/2 lg:order-1 2xl:order-2 lg:text-6xl 2xl:text-7xl font-bold text-primary text-center flex-nowrap">
+            <h1 id="phValue" class="text-6xl lg:px-8 xl:px-10 2xl:px-4 lg:w-full md:text-7xl flex-1/2 lg:order-1 2xl:order-2 lg:text-6xl 2xl:text-7xl font-bold text-primary text-center">
               6.5
             </h1>
           </div>
@@ -122,19 +128,19 @@
               class="block w-full lg:w-[80%] bg-primary 2xl:text-4xl justify-center active:bg-white active:text-secondary items-center rounded-full lg:rounded-[40px] mt-8 mb-4 lg:mt-8 lg:mx-2 lg:mb-6 mx-0 lg:h-30 text-white text-3xl lg:text-2xl md:text-4xl font-extrabold text-center px-4 py-2 hover:text-primary hover:bg-tersier">
               Flush
             </button>
-            <p id="ground-good-status" class="text-primary font-semibold text-2xl  2xl:text-3xl md:text-3xl lg:text-lg/5 text-center mt-2 mb-8 mx-2 lg:mx-0">
+            <p id="ground-good-status" class="text-primary w-full font-semibold text-2xl  2xl:text-3xl md:text-3xl lg:text-lg/5 text-center mt-2 mb-8 mx-2 lg:mx-0">
               Based on our calculation, <br>
               your ground is in <br>
               <span class="font-bold text-4xl lg:text-2xl md:text-5xl 2xl:text-6xl text-primary">GOOD<br></span>
               condition
             </p>
-            <p id="ground-poor-status" class="hidden text-red-400 font-semibold text-2xl  2xl:text-3xl md:text-3xl lg:text-lg/5 text-center mt-2 mb-8 mx-2 lg:mx-0">
+            <p id="ground-poor-status" class="hidden w-full text-red-400 font-semibold text-2xl  2xl:text-3xl md:text-3xl lg:text-lg/5 text-center mt-2 mb-8 mx-2 lg:mx-0">
               Based on our calculation, <br>
               your ground is in <br>
               <span class="font-bold text-4xl lg:text-2xl md:text-5xl 2xl:text-6xl text-red-500">POOR<br></span>
               condition
             </p>
-            <button id="info-button" class="justify-self-end bg-primary hover:bg-tersier active:bg-white active:text-secondary hover:text-primary text-white px-8 mb-10 cursor-pointer rounded-[40px] font-bold text-lg">
+            <button id="info-button" class="justify-self-end mx-auto bg-primary hover:bg-tersier active:bg-white active:text-secondary hover:text-primary text-white px-10 lg:px-12 xl:px-14 mb-10 cursor-pointer rounded-[40px] font-bold text-lg">
               Info
             </button>
           </div>
@@ -149,10 +155,10 @@
     <div class="@container">
       <div class="mx-8 my-4">
         <div class="justify-items-center">
-          <h1 class="text-4xl md:text-5xl  2xl:text-6xl font-extrabold text-white text-center mx-4 mt-12">
+          <h1 class="text-4xl md:text-5xl 2xl:text-6xl font-extrabold text-white text-center mx-4 mt-12">
             An-Dzuru
           </h1>
-          <h2 class="text-base md:text-lg  2xl:text-2xl tracking-widest text-center 2xl:mt-2 font-medium mb-4 mx-4 text-white">
+          <h2 class="text-base md:text-lg 2xl:text-2xl tracking-widest text-center 2xl:mt-2 font-medium mb-4 mx-4 text-white">
             Quick Data, Huge Impact
           </h2>
           <p class="text-sm font-normal md:text-base 2xl:text-2xl tracking-widest text-tersier text-center my-8 mx-20">
@@ -222,6 +228,8 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
   <script type="module" src="./src/index.mjs"></script>
 </body>
 </html>

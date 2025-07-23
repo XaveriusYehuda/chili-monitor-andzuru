@@ -318,12 +318,264 @@ const setupWebSocket = () => {
   };
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+// --- LOGIKA PUSH NOTIFICATION ---
+const VAPID_PUBLIC_KEY = 'BEr7RhsHyH-U39qwfNHjCgsxD3_cBFL17xttbkvTWYbavxeJoED-IKkSf1Ui4CUYiIdGsNeknYBqeEjVuIFQgFc'; //
+
+// Helper function from NotificationModel and sw.js
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4); //
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/'); //
+  const rawData = window.atob(base64); //
+  const outputArray = new Uint8Array(rawData.length); //
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i); //
+  }
+  return outputArray; //
+}
+
+// Fungsi untuk mengirim langganan ke backend
+async function sendSubscriptionToBackend(subscription, token) {
+  if (!token) {
+    console.error('No auth token found'); //
+    throw new Error('Authentication token is missing.'); //
+  }
+
+  const subscribeUrl = 'https://chili-monitor-data.andzuru.space/api/save-subscription'; //
+
+  console.log('Preparing subscription data for backend...'); //
+  const p256dhKey = subscription.getKey('p256dh'); //
+  const authKey = subscription.getKey('auth'); //
+  if (!p256dhKey || !authKey) {
+    console.error('Subscription keys are missing'); //
+    throw new Error('Subscription keys are missing'); //
+  }
+  const body = {
+    endpoint: subscription.endpoint, //
+    keys: {
+      p256dh: btoa(String.fromCharCode(...new Uint8Array(p256dhKey))), //
+      auth: btoa(String.fromCharCode(...new Uint8Array(authKey))), //
+    },
+  };
+
+  console.log('Sending subscription to backend:', body); //
+
+  try {
+    const response = await fetch(subscribeUrl, {
+      method: 'POST', //
+      headers: {
+        'Content-Type': 'application/json', //
+        'Authorization': `Bearer ${token}`, //
+      },
+      body: JSON.stringify(body), //
+    });
+
+    const data = await response.json(); //
+    if (!response.ok) {
+      console.error('Backend subscription error:', data); //
+      throw new Error(data.message || 'Failed to send subscription to backend'); //
+    }
+    console.log('Backend subscription successful:', data); //
+    return data; //
+  } catch (error) {
+    console.error('Subscription error:', error); //
+    throw error; //
+  }
+}
+
+// Fungsi untuk mengirim unsubscription ke backend
+async function sendUnsubscriptionToBackend(endpoint, token) {
+  if (!token) {
+    console.error('No auth token found'); //
+    throw new Error('Authentication token is missing.'); //
+  }
+
+  const unsubscribeUrl = 'https://chili-monitor-data.andzuru.space/api/delete-subscription'; //
+
+  const body = {
+    endpoint: endpoint, //
+  };
+
+  try {
+    const response = await fetch(unsubscribeUrl, {
+      method: 'DELETE', //
+      headers: {
+        'Content-Type': 'application/json', //
+        'Authorization': `Bearer ${token}`, //
+      },
+      body: JSON.stringify(body), //
+    });
+
+    const data = await response.json(); //
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to send unsubscription to backend'); //
+    }
+    console.log('Unsubscription sent to backend successfully:', data); //
+    return data; //
+  } catch (error) {
+    console.error('Error sending unsubscription to backend:', error); //
+    throw error; //
+  }
+}
+
+// Fungsi untuk mengecek status langganan push
+async function getPushSubscriptionStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return { supported: false, subscribed: false, error: 'Push notification not supported' }; //
+  }
+  try {
+    const registration = await navigator.serviceWorker.ready; //
+    const subscription = await registration.pushManager.getSubscription(); //
+    return { supported: true, subscribed: !!subscription, subscriptionObject: subscription }; //
+  } catch (error) {
+    return { supported: true, subscribed: false, error: 'Failed to check subscription status.' }; //
+  }
+}
+
+// Fungsi untuk memperbarui tampilan tombol subscribe/unsubscribe
+function updateSubscriptionButtons(isSubscribed) {
+  const subscribeBtn = document.getElementById('subscribeBtn'); //
+  const subscribeBtnMobile = document.getElementById('subscribeBtnMobile'); //
+
+  if (subscribeBtn && subscribeBtnMobile) {
+    if (isSubscribed) {
+      subscribeBtn.textContent = 'Unsubscribe'; //
+      subscribeBtn.classList.remove('text-primary', 'hover:text-tersier');
+      subscribeBtn.classList.add('bg-primary', 'px-6', 'text-white', 'rounded-full', 'transition-colors', 'hover:text-primary', 'hover:bg-white'); // Menambahkan gaya dari index.mjs asli
+
+      subscribeBtnMobile.textContent = 'Unsubscribe'; //
+      subscribeBtnMobile.classList.remove('group-hover:text-tersier');
+      subscribeBtnMobile.classList.add('bg-primary', 'px-6', 'text-white', 'rounded-full', 'transition-colors', 'hover:text-primary', 'hover:bg-white'); // Menambahkan gaya dari index.mjs asli
+    } else {
+      subscribeBtn.textContent = 'Subscribe'; //
+      subscribeBtn.classList.remove('bg-primary', 'px-6', 'text-white', 'rounded-full', 'hover:bg-white', 'hover:text-primary'); // Menghapus gaya unsubscribe
+      subscribeBtn.classList.add('text-primary', 'hover:text-tersier'); // Mengembalikan gaya subscribe default
+
+      subscribeBtnMobile.textContent = 'Subscribe'; //
+      subscribeBtnMobile.classList.remove('bg-primary', 'px-6', 'text-white', 'rounded-full', 'hover:bg-white', 'hover:text-primary'); // Menghapus gaya unsubscribe
+      subscribeBtnMobile.classList.add('group-hover:text-tersier'); // Mengembalikan gaya subscribe default
+    }
+  }
+}
+
+// Fungsi untuk setup push notification dan service worker
+async function setupPushNotification() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('Push notification tidak didukung.');
+    // Tampilkan peringatan di UI jika ada elemen untuk itu
+    // showNotifStatus('Push notification tidak didukung di browser ini.', true);
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js'); //
+    console.log('Service Worker terdaftar:', registration); //
+
+    const permission = await Notification.requestPermission(); //
+    if (permission === 'denied') {
+      console.warn('Izin notifikasi tidak diberikan'); //
+      // showNotifStatus('Izin notifikasi ditolak. Anda tidak akan menerima push notifikasi.', true);
+      updateSubscriptionButtons(false); // Pastikan tombol menunjukkan 'Subscribe' jika denied
+      return;
+    }
+
+    const subscriptionStatus = await getPushSubscriptionStatus(); // Mengambil status langganan
+    updateSubscriptionButtons(subscriptionStatus.subscribed); //
+
+  } catch (error) {
+    console.error('Gagal setup push notification:', error); //
+    // showGenericNotificationError(error.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   setupWebSocket();
   setupMQTT();
 
   openDb().then(() => {
   }).catch(err => console.error('Failed to open IndexedDB:', err));
+
+  // Daftarkan Service Worker dan setup notifikasi push
+  await setupPushNotification();
+
+  const subscribeBtn = document.getElementById('subscribeBtn'); //
+  const subscribeBtnMobile = document.getElementById('subscribeBtnMobile'); //
+
+  // Event listener untuk tombol Subscribe
+  if (subscribeBtn) {
+    subscribeBtn.addEventListener('click', async () => { //
+      const status = await getPushSubscriptionStatus(); //
+      // Dummy token, ganti dengan token autentikasi pengguna asli jika ada
+      const userToken = 'YOUR_USER_AUTH_TOKEN'; // <<< GANTI DENGAN TOKEN AUTH ASLI JIKA ADA
+      if (status.subscribed) { //
+        try {
+          await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, userToken); //
+          // Setelah berhasil unsubscribe dari backend, lakukan unsubscribe di browser
+          await status.subscriptionObject.unsubscribe(); //
+          console.log('Successfully unsubscribed!');
+          updateSubscriptionButtons(false); //
+          alert('You have successfully unsubscribed from push notifications.');
+        } catch (error) {
+          console.error('Error unsubscribing:', error);
+          alert('Failed to unsubscribe. Please try again.');
+        }
+      } else {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY); //
+          const subscription = await registration.pushManager.subscribe({ //
+            userVisibleOnly: true, //
+            applicationServerKey: applicationServerKey, //
+          });
+          await sendSubscriptionToBackend(subscription, userToken); //
+          console.log('Successfully subscribed!');
+          updateSubscriptionButtons(true); //
+          alert('You have successfully subscribed to push notifications!');
+        } catch (error) {
+          console.error('Error subscribing:', error);
+          alert('Failed to subscribe. Please ensure notifications are enabled and try again.');
+        }
+      }
+    });
+  }
+
+  // Event listener untuk tombol Subscribe Mobile (jika Anda ingin logika yang sama)
+  if (subscribeBtnMobile) {
+    subscribeBtnMobile.addEventListener('click', async () => { //
+      // Logika sama dengan tombol subscribe utama
+      const status = await getPushSubscriptionStatus(); //
+      const userToken = 'YOUR_USER_AUTH_TOKEN'; // <<< GANTI DENGAN TOKEN AUTH ASLI JIKA ADA
+      if (status.subscribed) { //
+        try {
+          await sendUnsubscriptionToBackend(status.subscriptionObject.endpoint, userToken); //
+          await status.subscriptionObject.unsubscribe(); //
+          console.log('Successfully unsubscribed (Mobile)!');
+          updateSubscriptionButtons(false); //
+          alert('You have successfully unsubscribed from push notifications.');
+        } catch (error) {
+          console.error('Error unsubscribing (Mobile):', error);
+          alert('Failed to unsubscribe. Please try again.');
+        }
+      } else {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY); //
+          const subscription = await registration.pushManager.subscribe({ //
+            userVisibleOnly: true, //
+            applicationServerKey: applicationServerKey, //
+          });
+          await sendSubscriptionToBackend(subscription, userToken); //
+          console.log('Successfully subscribed (Mobile)!');
+          updateSubscriptionButtons(true); //
+          alert('You have successfully subscribed to push notifications!');
+        } catch (error) {
+          console.error('Error subscribing (Mobile):', error);
+          alert('Failed to subscribe. Please ensure notifications are enabled and try again.');
+        }
+      }
+    });
+  }
 });
 
 // Update grafik pH menggunakan data dari array phFromDb
@@ -499,7 +751,6 @@ const myChartHumidity = new Chart(
 // Hamburger
 const Hamburger = document.querySelector('#hamburger');
 const navMenu = document.querySelector('#nav-menu');
-
 
 Hamburger.addEventListener('click', function () {
   Hamburger.classList.toggle('hamburger-active');

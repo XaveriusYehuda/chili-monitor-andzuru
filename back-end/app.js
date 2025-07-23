@@ -5,11 +5,48 @@ const mqttService = require('./mqtt-service');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const bodyParser = require('body-parser');
+const webpush = require('web-push');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken'); // Add this line
+require('dotenv').config(); // npm install dotenv
 
 const app = express();
 const server = http.createServer(app);
 
 app.use(cors());
+app.use(bodyParser.json());
+
+// Replace the placeholder with your Atlas connection string
+const uri = "mongodb+srv://xyehuda3:learnmore@cluster0.oktzg39.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+// Model Subscription
+const subscriptionSchema = new mongoose.Schema({
+  endpoint: { type: String, required: true, unique: true },
+  keys: {
+    p256dh: { type: String, required: true },
+    auth: { type: String, required: true }
+  },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Subscription = mongoose.model('Subscription', subscriptionSchema);
+
+async function connectToMongoDB() {
+  try {
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Terhubung ke MongoDB Atlas dengan Mongoose");
+    // Definisikan schema dan model di sini
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+connectToMongoDB();
 
 // Cache data sensor (FIFO, max 10 data per sensor)
 const sensorDataCache = new Map();
@@ -518,6 +555,222 @@ setInterval(() => {
     ws.ping();
   });
 }, 30000);
+
+// VAPID keys yang sudah digenerate
+// {
+//   publicKey: 'BEr7RhsHyH-U39qwfNHjCgsxD3_cBFL17xttbkvTWYbavxeJoED-IKkSf1Ui4CUYiIdGsNeknYBqeEjVuIFQgFc',
+//   privateKey: '-y6oAEaNXY4VwOwRdqHutjJml3B7cu_FhdKCt24gyqg'
+// }
+const vapidKeys = {
+  publicKey: 'BEr7RhsHyH-U39qwfNHjCgsxD3_cBFL17xttbkvTWYbavxeJoED-IKkSf1Ui4CUYiIdGsNeknYBqeEjVuIFQgFc',
+  privateKey: '-y6oAEaNXY4VwOwRdqHutjJml3B7cu_FhdKCt24gyqg'
+};
+
+webpush.setVapidDetails(
+  'mailto:xyehuda3@example.com',
+  vapidKeys.publicKey,
+  vapidKeys.privateKey
+);
+
+// Middleware autentikasi JWT
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+// Helper function untuk decode base64
+// app.js
+function base64ToUint8Array(base64String) {
+  // No padding needed with Buffer, it handles it
+  const buffer = Buffer.from(base64String, 'base64');
+  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+// Route untuk mendapatkan public key
+app.get('/api/vapidPublicKey', (req, res) => {
+  res.send(vapidKeys.publicKey);
+});
+
+// Route untuk menyimpan subscription
+app.post('/api/save-subscription', authenticateToken, async (req, res) => {
+  try {
+    const { endpoint, keys } = req.body;
+    
+    // Validasi data
+    if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Data subscription tidak lengkap' 
+      });
+    }
+
+    // Cek apakah subscription sudah ada
+    const existingSub = await Subscription.findOne({ endpoint });
+    
+    if (existingSub) {
+      // Update subscription yang sudah ada
+      existingSub.keys = keys;
+      existingSub.user = req.user.id;
+      await existingSub.save();
+      
+      return res.status(200).json({ 
+        success: true,
+        message: 'Subscription diperbarui',
+        subscriptionId: existingSub._id
+      });
+    } else {
+      // Buat subscription baru
+      const newSubscription = new Subscription({
+        endpoint,
+        keys,
+        user: req.user.id
+      });
+      
+      await newSubscription.save();
+      
+      // Kirim notifikasi selamat datang
+      const payload = JSON.stringify({
+        title: 'Berlangganan Berhasil',
+        body: 'Anda akan menerima notifikasi terbaru dari kami',
+        icon: '/icon.png'
+      });
+      
+      await webpush.sendNotification({ endpoint, keys }, payload);
+      
+      return res.status(201).json({ 
+        success: true,
+        message: 'Subscription disimpan',
+        subscriptionId: newSubscription._id
+      });
+    }
+  } catch (error) {
+    console.error('Error saving subscription:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Gagal menyimpan subscription',
+      error: error.message
+    });
+  }
+});
+
+// Route untuk mengirim notifikasi
+app.post('/api/send-notification', async (req, res) => {
+  const { subscription, title, body } = req.body;
+  
+  const payload = JSON.stringify({
+    title: title || 'Notifikasi Default',
+    body: body || 'Ini adalah isi notifikasi default',
+    icon: '/icon.png'
+  });
+  
+  try {
+    await webpush.sendNotification(subscription, payload);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Route untuk menghapus subscription
+app.delete('/api/delete-subscription', authenticateToken, async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    
+    if (!endpoint) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Endpoint diperlukan' 
+      });
+    }
+
+    // Hapus subscription
+    const result = await Subscription.findOneAndDelete({ 
+      endpoint,
+      user: req.user.id 
+    });
+    
+    if (!result) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Subscription tidak ditemukan' 
+      });
+    }
+    
+    return res.json({ 
+      success: true,
+      message: 'Subscription dihapus' 
+    });
+  } catch (error) {
+    console.error('Error deleting subscription:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Gagal menghapus subscription',
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/user-subscriptions', authenticateToken, async (req, res) => {
+  try {
+    const subscriptions = await Subscription.find({ user: req.user.id });
+    res.json({ 
+      success: true,
+      subscriptions 
+    });
+  } catch (error) {
+    console.error('Error getting user subscriptions:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Gagal mendapatkan subscriptions',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/broadcast-notification', authenticateToken, async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    
+    if (!title || !body) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Judul dan isi notifikasi diperlukan' 
+      });
+    }
+
+    const subscriptions = await Subscription.find({});
+    const payload = JSON.stringify({ title, body, icon: '/icon.png' });
+    
+    const results = await Promise.all(
+      subscriptions.map(sub => 
+        webpush.sendNotification(sub, payload)
+          .catch(err => console.error('Error sending to one subscription:', err))
+      )
+    );
+    
+    res.json({ 
+      success: true,
+      sentCount: results.filter(r => r).length,
+      message: `Notifikasi dikirim ke ${results.filter(r => r).length} perangkat` 
+    });
+  } catch (error) {
+    console.error('Error broadcasting notification:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Gagal mengirim notifikasi',
+      error: error.message
+    });
+  }
+});
 
 // Serve static files from Vite build output
 const staticDir = path.join(__dirname, 'dist');

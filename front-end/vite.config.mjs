@@ -1,17 +1,78 @@
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
+import { resolve } from 'path'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 8080
   },
-  plugins: [
-    tailwindcss(),
-  ],
   root: '.',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-  }
+  },
+  publicDir: resolve(__dirname, 'public'),
+  plugins: [
+    tailwindcss(),
+    VitePWA({
+      strategies: "injectManifest",
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      devOptions: { 
+        enabled: true 
+      },
+      srcDir: ".", 
+      filename: "sw.js", 
+      injectManifest: {
+        swSrc: resolve(__dirname, 'sw.js'),
+        swDest: './dist/sw.js',
+      },
+      manifest: {
+        id: '/',
+        start_url: '/',
+        display: 'fullscreen',
+        name: 'Andzuru Monitor',
+        short_name: 'Andzuru Monitor',
+        description: 'Andzuru Dashboard Monitor',
+        theme_color: '#A1E3F9',
+        icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '148x148.png', sizes: '148x148', type: 'image/png', purpose: 'any' },
+          { src: '96x96.png', sizes: '96x96', type: 'image/png', purpose: 'any' },
+          { src: '48x48.png', sizes: '48x48', type: 'image/png', purpose: 'any' },
+          { src: '32x32.png', sizes: '32x32', type: 'image/png', purpose: 'any' },
+          { src: '16x16.png', sizes: '16x16', type: 'image/png', purpose: 'any' },
+        ],
+        screenshots: [
+          {
+            src: 'screenshots-pc.png',
+            sizes: '2961x3840',
+            type: 'image/png',
+            form_factor: 'wide',
+          },
+          {
+            src: 'screenshots-mobile-1.png',
+            sizes: '440x956',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+          {
+            src: 'screenshots-mobile-2.png',
+            sizes: '440x956',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+          {
+            src: 'screenshots-mobile-3.png',
+            sizes: '440x956',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+        ],
+      },
+    }),
+  ],
 });
