@@ -323,6 +323,7 @@ function connectAwsWebSocket() {
 
           if (simplifiedData.value !== null && !isNaN(simplifiedData.value)) { // Hanya tambahkan jika nilai valid
               addDataToCache(nilaiSensor, simplifiedData);
+              checkAndSendAlertNotification(nilaiSensor, simplifiedData.value);
           }
         });
         // Tampilkan isi cache
@@ -443,6 +444,8 @@ mqttService.setMessageHandler((topic, payload) => {
 
     if (sensorTypeFromTopic && !isNaN(sensorValue) && sensorValue !== null && sensorValue !== undefined) {
         // addDataToCache(sensorTypeFromTopic, { timestamp: timestamp, value: sensorValue });
+        // **BARU**: Panggil fungsi untuk memeriksa dan mengirim notifikasi peringatan
+        // checkAndSendAlertNotification(sensorTypeFromTopic, sensorValue);
     }
 
     // Setelah menambahkan data MQTT ke cache, baru broadcast dari cache
@@ -842,6 +845,92 @@ app.delete('/api/clean-expired-users', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to clean expired users.', error: error.message });
   }
 });
+
+let lastNotificationSentTime = 0;
+const NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000; // Cooldown 1 jam untuk mencegah spam notifikasi
+
+async function sendAlertNotification(title, body) {
+    const currentTime = Date.now();
+    if (currentTime - lastNotificationSentTime < NOTIFICATION_COOLDOWN_MS) {
+        console.log(`Peringatan: Notifikasi terlalu sering. Menunggu cooldown (${(NOTIFICATION_COOLDOWN_MS - (currentTime - lastNotificationSentTime)) / 1000}s lagi).`);
+        return; // Jangan kirim notifikasi jika masih dalam masa cooldown
+    }
+
+    try {
+        const subscriptions = await Subscription.find({});
+        if (subscriptions.length === 0) {
+            console.log('Tidak ada langganan notifikasi yang ditemukan.');
+            return;
+        }
+
+        const payload = JSON.stringify({
+            title: title,
+            body: body,
+            icon: '/pwa-192x192.png',
+            vibrate: [200, 100, 200], // Efek getar
+            data: {
+                url: 'https://chili-monitor-data.andzuru.space', // URL yang akan dibuka saat notifikasi diklik
+                timestamp: Date.now()
+            }
+        });
+
+        console.log(`Mengirim notifikasi peringatan: ${title} - ${body} ke ${subscriptions.length} subscriber.`);
+        const results = await Promise.allSettled(
+            subscriptions.map(sub =>
+                webpush.sendNotification(sub, payload).catch(err => {
+                    if (err.statusCode === 410) { // GCM registration_id is no longer valid
+                        console.warn(`Langganan kedaluwarsa atau tidak valid: ${sub.endpoint}. Menghapus dari database.`);
+                        return Subscription.findByIdAndDelete(sub._id); // Hapus langganan yang sudah tidak valid
+                    } else {
+                        console.error('Gagal mengirim notifikasi ke satu langganan:', err);
+                        throw err; // Lempar error untuk ditangkap Promise.allSettled
+                    }
+                })
+            )
+        );
+
+        lastNotificationSentTime = currentTime; // Update waktu terakhir notifikasi dikirim
+
+        results.forEach(result => {
+            if (result.status === 'rejected') {
+                console.error('Detail error pengiriman notifikasi:', result.reason);
+            }
+        });
+        console.log('Selesai mengirim notifikasi peringatan.');
+
+    } catch (error) {
+        console.error('Error saat mengirim notifikasi peringatan massal:', error);
+    }
+}
+
+// Fungsi untuk memeriksa kondisi kelembapan dan pH
+function checkAndSendAlertNotification(sensorType, value) {
+  let title = 'Peringatan Kondisi Tanah!';
+  let body = '';
+  let sendNotification = false;
+
+  if (sensorType === 'device/humidity') {
+    if (value > 90) {
+      body = `Kelembapan tanah sangat tinggi: ${value.toFixed(1)}%. Segera periksa drainase!`;
+      sendNotification = true;
+    } else if (value < 10) {
+      body = `Kelembapan tanah sangat rendah: ${value.toFixed(1)}%. Segera lakukan penyiraman!`;
+      sendNotification = true;
+    }
+  } else if (sensorType === 'device/ph') {
+    if (value > 9.5) {
+      body = `pH tanah terlalu basa: ${value.toFixed(1)}. Perlu penyesuaian untuk menurunkan pH.`;
+      sendNotification = true;
+    } else if (value < 5) {
+      body = `pH tanah terlalu asam: ${value.toFixed(1)}. Perlu penyesuaian untuk menaikkan pH.`;
+      sendNotification = true;
+    }
+  }
+
+  if (sendNotification) {
+    sendAlertNotification(title, body);
+  }
+}
 
 // Serve static files from Vite build output
 const staticDir = path.join(__dirname, 'dist');
