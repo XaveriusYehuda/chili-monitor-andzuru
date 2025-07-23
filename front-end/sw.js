@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
   let notificationData = {
     title: 'Andzuru Monitor',
     options: {
-      body: 'Peringatan!',
+      body: 'Selamat Datang!',
       icon: 'pwa-196x196.png', // Ganti sesuai path icon Anda
       badge: '148x148.png', // Ganti sesuai path badge Anda
     },

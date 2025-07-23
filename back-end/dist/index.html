@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>An-Dzuru Monitor</title>
-  <script type="module" crossorigin src="/assets/index-9aqhKJBq.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DGmVjtl8.css">
+  <script type="module" crossorigin src="/assets/index-DSCNO15Y.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CSvajXpn.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
   <!-- Hero Section Section Start -->
@@ -125,7 +125,7 @@
             <div class="border-primary border-2 lg:border-[1px] 2xl:border-2 lg:mx-2 w-full lg:w-[80%]"></div>
 
             <!-- Tombol -->
-            <button id="flushButton" onclick="nyalakanPompa()"
+            <button id="flushButton"
               class="block w-full lg:w-[80%] bg-primary 2xl:text-4xl justify-center active:bg-white active:text-secondary items-center rounded-full lg:rounded-[40px] mt-8 mb-4 lg:mt-8 lg:mx-2 lg:mb-6 mx-0 lg:h-30 text-white text-3xl lg:text-2xl md:text-4xl font-extrabold text-center px-4 py-2 hover:text-primary hover:bg-tersier">
               Flush
             </button>
@@ -185,6 +185,19 @@
         <div class="mt-6 mb-6 flex justify-center items-center gap-4">
           <button id="download-data" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Download</button>
           <button id="cancel-download" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <section id="modal-notif-container" class="fixed hidden z-[5000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-600 opacity-75"></section>
+  <section id="modal-notif-alert" class="fixed hidden z-[6000] left-1/2 top-1/2 transform -translate-y-1/2 -translate-x-1/2 max-w-[700px] h-full overflow-auto">
+    <div class="flex justify-center items-center min-h-screen py-10">
+      <div id="modal-main-notif" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-6 pr-6 pb-6 w-[87vw] max-w-[87vw] opacity-100">
+        <h2 id="title-notif-modal" class="text-3xl md:text-4xl lg:text-5xl font-bold text-center text-primary my-6">Notification</h2>
+        <p id="content-notif-modal" class="text-lg/8 md:text-xl/9 lg:text-2xl/9 text-center text-primary mb-4">Nice to meet you!</p>
+        <div class="mt-6 mb-6 flex justify-center items-center gap-4">
+          <button id="close-notif" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>
         </div>
       </div>
     </div>

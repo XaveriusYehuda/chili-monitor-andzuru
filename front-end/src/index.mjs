@@ -255,7 +255,7 @@ const setupWebSocket = () => {
       const poorGroundStatus = document.getElementById('ground-poor-status');
 
       // Validasi nilai untuk status tanah
-      if (!isNaN(phRaw) && !isNaN(humidityRaw) && (phRaw > 8.5 || phRaw < 5.5 || humidityRaw > 90.00 || humidityRaw < 10.00)) {
+      if (!isNaN(phRaw) && !isNaN(humidityRaw) && (phRaw > 9.5 || phRaw < 5 || humidityRaw > 90.00 || humidityRaw < 10.00)) {
         goodGroundStatus.classList.add('hidden');
         poorGroundStatus.classList.remove('hidden');
       } else {
@@ -493,12 +493,47 @@ function generateRandomString(length = 8) {
   return Math.random().toString(36).substring(2, 2 + length);
 }
 
+const notifModalContainer = document.getElementById('modal-notif-container');
+const notifModal = document.getElementById('notif-modal-alert');
+const notifMain = document.getElementById('modal-main-notif');
+const notifTitle = document.getElementById('title-notif-modal');
+const notifContent = document.getElementById('content-notif-modal');
+const notifCloseButton = document.getElementById('close-notif');
+
+function notificationAlert(title, content) {
+  if (!notifModalContainer || !notifModal || !notifMain || !notifContent || !notifCloseButton) {
+    console.error('Modal elements not found in the DOM');
+    return;
+  }
+
+  notifContent.textContent = content; // Set content
+  notifTitle.textContent = title; // Set title
+  notifModalContainer.classList.remove('hidden'); // Show modal
+  notifModal.classList.remove('hidden'); // Show modal content
+
+  // Add event listener to close button
+  notifCloseButton.onclick = () => {
+    notifModalContainer.classList.add('hidden'); // Hide modal
+    notifModal.classList.add('hidden'); // Hide modal content
+  };
+
+  // Close modal when clicking outside of it
+  window.onclick = (event) => {
+    if (!notifMain.contains(event.target) && event.target === notifModalContainer) {
+      notifModalContainer.classList.add('hidden');
+      notifModal.classList.add('hidden');
+    }
+  };
+}
+
 async function registerAndAutoLogin(attempt = 0) {
   const maxAttempts = 5; // Batasi percobaan untuk menghindari loop tak terbatas
 
   if (attempt >= maxAttempts) {
     console.error("Failed to auto-register after multiple attempts due to duplicate username/email.");
-    alert("Gagal melakukan registrasi otomatis setelah beberapa percobaan. Silakan coba lagi nanti.");
+    const title = "Registration Failed";
+    const content = "Failed to auto-register after multiple attempts due to duplicate username/email.";
+    notificationAlert(title, content);
     return false;
   }
 
@@ -523,19 +558,25 @@ async function registerAndAutoLogin(attempt = 0) {
       console.log('Registration successful, token received:', data.token);
       localStorage.setItem('userToken', data.token); // Simpan token di localStorage
       localStorage.setItem('userToken_createdAt', Date.now()); // Simpan waktu pembuatan token
-      alert('Registrasi berhasil! Anda telah otomatis login.');
+      const title = 'Registration Successful';
+      const content = 'Registration successful! You have automatically logged in.';
+      notificationAlert(title, content);
       return true;
     } else if (response.status === 409) { // Konflik, username/email sudah ada
       console.warn('Username or email already exists. Retrying with new random values.');
       return registerAndAutoLogin(attempt + 1); // Coba lagi dengan data baru
     } else {
       console.error('Registration failed:', data.message || 'Unknown error', data);
-      alert(`Registrasi gagal: ${data.message || 'Terjadi kesalahan.'}`);
+      const title = "Registration Failed";
+      const content = `Registration failed: ${data.message || 'An error occurred during registration.'}`;
+      notificationAlert(title, content);
       return false;
     }
   } catch (error) {
     console.error('Error during registration:', error);
-    alert('Terjadi kesalahan saat registrasi.');
+    const title = "Registration Failed";
+    const content = 'An error occurred during registration.';
+    notificationAlert(title, content);
     return false;
   }
 }
@@ -591,7 +632,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log("Auto-registration and login successful. New Token:", userToken);
     } else {
       console.error("Auto-registration and login failed. User cannot proceed without a token.");
-      alert("Gagal mendapatkan sesi pengguna. Fungsi tertentu mungkin tidak bekerja.");
+      const title = "Registration Failed";
+      const content = "Failed to obtain a user session. Certain functions may not work.";
+      notificationAlert(title, content);
       // Anda mungkin ingin menonaktifkan fitur yang memerlukan token di sini
       return; // Hentikan eksekusi lebih lanjut jika tidak ada token
     }
@@ -616,7 +659,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     subscribeBtn.addEventListener('click', async () => {
       const currentToken = localStorage.getItem('userToken');
       if (!currentToken) {
-        alert("Sesi pengguna tidak ditemukan. Harap segarkan halaman untuk mendapatkan sesi baru.");
+        const title = "Subscription Failed";
+        const content = "User session not found. Please refresh the page to get a new session.";
+        notificationAlert(title, content);
         return;
       }
 
@@ -628,10 +673,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           await status.subscriptionObject.unsubscribe();
           console.log('Successfully unsubscribed!');
           updateSubscriptionButtons(false);
-          alert('You have successfully unsubscribed from push notifications.');
+          const title = 'Successfully Unsubscribed';
+          const content = 'You have successfully unsubscribed from push notifications.';
+          notificationAlert(title, content);
         } catch (error) {
           console.error('Error unsubscribing:', error);
-          alert('Failed to unsubscribe. Please try again.');
+          const title = 'Unsubscription Failed';
+          const content = 'Failed to unsubscribe. Please try again.';
+          notificationAlert(title, content);
         }
       } else {
         try {
@@ -645,10 +694,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           await sendSubscriptionToBackend(subscription, currentToken);
           console.log('Successfully subscribed!');
           updateSubscriptionButtons(true);
-          alert('You have successfully subscribed to push notifications!');
+          const title = 'Successful Subscription';
+          const content = 'You have successfully subscribed to push notifications!';
+          notificationAlert(title, content);
         } catch (error) {
           console.error('Error subscribing:', error);
-          alert('Failed to subscribe. Please ensure notifications are enabled and try again.');
+          const title = 'Subscription Failed';
+          const content = 'Failed to subscribe. Please ensure notifications are enabled and try again.';
+          notificationAlert(title, content);
         }
       }
     });
@@ -658,7 +711,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     subscribeBtnMobile.addEventListener('click', async () => {
       const currentToken = localStorage.getItem('userToken');
       if (!currentToken) {
-        alert("Sesi pengguna tidak ditemukan. Harap segarkan halaman untuk mendapatkan sesi baru.");
+        const title = 'Unsubscription Failed';
+        const content = "User session not found. Please refresh the page to get a new session.";
+        notificationAlert(title, content);
         return;
       }
 
@@ -669,10 +724,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           await status.subscriptionObject.unsubscribe();
           console.log('Successfully unsubscribed (Mobile)!');
           updateSubscriptionButtons(false);
-          alert('You have successfully unsubscribed from push notifications.');
+          const title = 'Unsubscription Failed';
+          const content = 'You have successfully unsubscribed from push notifications.';
+          notificationAlert(title, content);
         } catch (error) {
           console.error('Error unsubscribing (Mobile):', error);
-          alert('Failed to unsubscribe. Please try again.');
+          const title = 'Unsubscription Failed';
+          const content = 'Failed to unsubscribe. Please try again.';
+          notificationAlert(title, content);
         }
       } else {
         try {
@@ -685,10 +744,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           await sendSubscriptionToBackend(subscription, currentToken);
           console.log('Successfully subscribed (Mobile)!');
           updateSubscriptionButtons(true);
-          alert('You have successfully subscribed to push notifications!');
+          const title = 'Successfully subscribed (Mobile)!';
+          const content = 'You have successfully subscribed to push notifications!';
+          notificationAlert(title, content);
         } catch (error) {
           console.error('Error subscribing (Mobile):', error);
-          alert('Failed to subscribe. Please ensure notifications are enabled and try again.');
+          const title = 'Successfully subscribed (Mobile)!';
+          const content = 'Failed to subscribe. Please ensure notifications are enabled and try again.';
+          notificationAlert(title, content);
         }
       }
     });
@@ -1003,6 +1066,16 @@ window.addEventListener('click', function (e) {
       modal1.classList.add('hidden');
       modal2.classList.add('hidden');
     }
+  }
+});
+
+flushButton.addEventListener('click', () => {
+  nyalakanPompa();
+  const pumpIsActive = {
+    action: 'pumpIsActive',
+  };
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(pumpIsActive));
   }
 });
 

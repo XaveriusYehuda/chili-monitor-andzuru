@@ -10,6 +10,7 @@ const webpush = require('web-push');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken'); // Add this line
 const bcrypt = require('bcrypt'); // Add this line
+const { time } = require('console');
 require('dotenv').config(); // npm install dotenv
 
 const app = express();
@@ -81,16 +82,16 @@ function normalizeTimestamp(timestamp) {
     // Coba parse string ke float, jika gagal fallback ke Date.parse atau Date.now
     const parsed = parseFloat(timestamp);
     if (!isNaN(parsed)) {
-        timestamp = parsed;
+      timestamp = parsed;
     } else {
-        // Jika string bukan angka murni, coba parse sebagai ISO string atau format lain
-        const dateParsed = Date.parse(timestamp);
-        if (!isNaN(dateParsed)) {
-            timestamp = dateParsed;
-        } else {
-            console.warn(`Timestamp string tidak dapat dinormalisasi: ${timestamp}. Menggunakan Date.now().`);
-            timestamp = Date.now(); // Fallback jika tidak bisa di-parse
-        }
+      // Jika string bukan angka murni, coba parse sebagai ISO string atau format lain
+      const dateParsed = Date.parse(timestamp);
+      if (!isNaN(dateParsed)) {
+        timestamp = dateParsed;
+      } else {
+        console.warn(`Timestamp string tidak dapat dinormalisasi: ${timestamp}. Menggunakan Date.now().`);
+        timestamp = Date.now(); // Fallback jika tidak bisa di-parse
+      }
     }
   }
 
@@ -552,6 +553,20 @@ wss.on('connection', (ws) => {
   // Broadcast data cache terbaru seperti biasa
   broadcastLatestCacheData();
 
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      if (data.action === 'pumpIsActive') {
+        const title = 'Pompa Aktif';
+        const body = 'Pompa sedang aktif. Pastikan untuk memantau kondisi tanah.';
+        
+        sendAlertNotification(title, body);
+      }
+    } catch (error) {
+      console.error('Error parsing message from client:', error);
+    }
+  });
+
   ws.on('close', () => {
     clients.delete(ws);
     // Hapus dari pending queue jika user disconnect sebelum initial data diterima
@@ -930,6 +945,32 @@ function checkAndSendAlertNotification(sensorType, value) {
   if (sendNotification) {
     sendAlertNotification(title, body);
   }
+}
+
+// Fungsi untuk menandai apakah pompa sedang aktif atau tidak
+function isPumpActive() {
+  const hour = date.getHours(); // Gunakan timestamp saat ini untuk normalisasi
+  const minute = date.getMinutes(); // Gunakan timestamp saat ini untuk normalisasi
+  const second = date.getSecond(); // Gunakan timestamp saat ini untuk normalisasi
+  return hour == 7 && minute == 0 && second == 0;
+  
+  const humidityData = sensorDataCache.get('device/humidity') || [];
+  if (humidityData.length === 0) return false; // Tidak ada data, anggap pompa tidak aktif
+  const latestHumidity = humidityData[humidityData.length - 1].value;
+
+  const phData = sensorDataCache.get('device/ph') || [];
+  if (phData.length === 0) return false; // Tidak ada data, anggap pompa tidak aktif
+  const latestPhValue = phData[phData.length - 1].value;
+
+  return latestPhValue < 5.0 || latestPhValue > 9.5 || latestHumidity < 10 || latestHumidity > 90; // Anggap pompa aktif jika pH < 6.0
+}
+
+// Fungsi untuk notifikasi penanda pompa aktif
+if(isPumpActive()) {
+  const title = 'Pompa Aktif';
+  const body = 'Pompa sedang aktif. Pastikan untuk memantau kondisi tanah.';
+  
+  sendAlertNotification(title, body);
 }
 
 // Serve static files from Vite build output
