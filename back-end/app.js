@@ -52,6 +52,15 @@ userSchema.pre('save', async function(next) {
 
 const User = mongoose.model('User', userSchema);
 
+// Model untuk data historis
+let hourlyDataSchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  data: { type: Object, required: true },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+
+let HourlyData = mongoose.model('HourlyData', hourlyDataSchema);
+
 async function connectToMongoDB() {
   try {
     await mongoose.connect(uri);
@@ -182,6 +191,40 @@ const wsExternalUrl  = 'wss://xyfg4ic2ii.execute-api.ap-southeast-1.amazonaws.co
 let wsExternal;
 let reconnectInterval; // Untuk mengatur interval reconnection
 
+let hourlyCheckInterval;
+let lastSentHour = null;
+
+function setupHourlyCheck() {
+  // Clear existing interval if any
+  if (hourlyCheckInterval) {
+    clearInterval(hourlyCheckInterval);
+  }
+  
+  // Check every minute (60000ms) for the top of the hour
+  hourlyCheckInterval = setInterval(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Kirim hanya jika:
+    // 1. Ini menit ke-0 (00)
+    // 2. Jam berbeda dengan terakhir dikirim (untuk hindari duplikat)
+    if (currentMinute === 0 && currentHour !== lastSentHour) {
+      console.log(`🕒 Sending hourly data request at ${currentHour}:00`);
+      wsExternal.send(JSON.stringify({ "action": "getLastBigData" }));
+      lastSentHour = currentHour;
+    }
+  }, 60000); // Check every minute
+    
+  // Juga lakukan immediate check saat setup
+  const now = new Date();
+  if (now.getMinutes() === 0) {
+    wsExternal.send(JSON.stringify({ action: 'getLastBigData' }));
+    lastSentHour = now.getHours();
+  }
+}
+
+
 function connectAwsWebSocket() {
   // Clear any existing reconnect interval to prevent multiple connections
   if (reconnectInterval) {
@@ -196,6 +239,7 @@ function connectAwsWebSocket() {
 
   console.log('🔗 Mencoba menyambung ke AWS WebSocket:', wsExternalUrl);
   wsExternal = new WebSocket(wsExternalUrl);
+  // Variabel untuk menyimpan interval
 
   wsExternal.onopen = () => {
     console.log('✅ Connected to AWS WebSocket');
@@ -203,6 +247,10 @@ function connectAwsWebSocket() {
     setTimeout(() => {
       wsExternal.send(JSON.stringify({ action: 'getLastData' }));
     }, 500);
+
+    // Setup hourly check
+    setupHourlyCheck();
+    
     // Reset reconnect attempts on successful connection
     if (reconnectInterval) {
       clearInterval(reconnectInterval);
@@ -212,10 +260,10 @@ function connectAwsWebSocket() {
 
   wsExternal.on('message', (message) => {
     try {
-      console.log('Pesan diterima dari server:', message.toString());
+      // console.log('Pesan diterima dari server:', message.toString());
       const parsed = JSON.parse(message);
       if (parsed.action === 'initialData') {
-        console.log('Received initial data:', parsed.data);
+        // console.log('Received initial data:', parsed.data);
         sensorDataCache.clear();
 
         let initialDataToProcess = [];
@@ -273,6 +321,47 @@ function connectAwsWebSocket() {
             }
           });
           pendingInitialDataClients = [];
+        }
+      }
+
+      if (parsed.action === 'initialBigData') async () => {
+        console.log('Received initial big data:', parsed.data);
+        
+        try {
+          // Simpan ke MongoDB
+          const dbData = {
+            type: 'hourly_averages',
+            data: {
+              kelembapan: parsed.data.kelembapan,
+              ph: parsed.data.ph
+            },
+            createdAt: new Date()
+          };
+
+          // Gantilah 'HourlyData' dengan model Mongoose Anda
+          const HourlyData = mongoose.model('HourlyData', new mongoose.Schema({
+            type: String,
+            data: Object,
+            createdAt: { type: Date, default: Date.now }
+          }));
+
+          await HourlyData.create(dbData);
+          console.log('Data historis berhasil disimpan ke MongoDB');
+          
+          // Kirim notifikasi ke client
+          const bigDataMsg = {
+            topic: 'historicalData',
+            data: parsed.data,
+            timestamp: new Date().toISOString()
+          };
+          
+          // clients.forEach(client => {
+          //   if (client.readyState === WebSocket.OPEN) {
+          //     client.send(JSON.stringify(bigDataMsg));
+          //   }
+          // });
+        } catch (error) {
+          console.error('Gagal menyimpan data historis ke MongoDB:', error);
         }
       }
 
@@ -348,6 +437,9 @@ function connectAwsWebSocket() {
         console.log('🔁 Reconnect attempt for AWS WebSocket...');
         connectAwsWebSocket();
       }, 5000); // Coba reconnect setiap 5 detik
+    }
+    if (hourlyCheckInterval) {
+        clearInterval(hourlyCheckInterval);
     }
   });
 
@@ -561,6 +653,58 @@ wss.on('connection', (ws) => {
         const body = 'Pompa sedang aktif. Pastikan untuk memantau kondisi tanah.';
         
         sendAlertNotification(title, body);
+      }
+
+      // Handler untuk permintaan data historis
+      else if (data.action === 'getHistoryData') async () => {
+        console.log(`Menerima permintaan data historis dari client`);
+        
+        try {
+          // Dapatkan tanggal hari ini (UTC+7)
+          const now = new Date();
+          const jakartaOffset = 7 * 60 * 60 * 1000; // UTC+7 offset dalam milidetik
+          const todayStart = new Date(now.getTime() + jakartaOffset);
+          todayStart.setUTCHours(0, 0, 0, 0);
+          const todayEnd = new Date(todayStart);
+          todayEnd.setUTCDate(todayStart.getUTCDate() + 1);
+          
+          // Query data dari MongoDB
+          const HourlyData = mongoose.model('HourlyData');
+          const historicalData = await HourlyData.find({
+            type: 'hourly_averages',
+            createdAt: {
+              $gte: todayStart,
+              $lt: todayEnd
+            }
+          }).sort({ createdAt: 1 });
+          
+          // Format data untuk dikirim ke client
+          const formattedData = {
+            topic: 'historicalData',
+            data: historicalData.map(item => ({
+              timestamp: item.createdAt.toISOString(),
+              kelembapan: item.data.kelembapan,
+              ph: item.data.ph
+            })),
+            timestamp: new Date().toISOString()
+          };
+          
+          // Kirim hanya ke client yang meminta
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(formattedData));
+            console.log(`Mengirim ${historicalData.length} data historis ke client`);
+          }
+        } catch (error) {
+          console.error('Gagal mengambil data historis:', error);
+          // Kirim pesan error ke client yang meminta
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              topic: 'error',
+              message: 'Gagal mengambil data historis',
+              timestamp: new Date().toISOString()
+            }));
+          }
+        }
       }
     } catch (error) {
       console.error('Error parsing message from client:', error);
@@ -967,7 +1111,7 @@ function isPumpActive() {
 }
 
 // Fungsi untuk notifikasi penanda pompa aktif
-if(isPumpActive()) {
+if (isPumpActive()) {
   const title = 'Pompa Aktif';
   const body = 'Pompa sedang aktif. Pastikan untuk memantau kondisi tanah.';
   
