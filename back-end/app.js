@@ -260,10 +260,10 @@ function connectAwsWebSocket() {
 
   wsExternal.on('message', (message) => {
     try {
-      // console.log('Pesan diterima dari server:', message.toString());
+      console.log('Pesan diterima dari server:', message.toString());
       const parsed = JSON.parse(message);
       if (parsed.action === 'initialData') {
-        // console.log('Received initial data:', parsed.data);
+        console.log('Received initial data:', parsed.data);
         sensorDataCache.clear();
 
         let initialDataToProcess = [];
