@@ -645,30 +645,57 @@ wss.on('connection', (ws) => {
   // Broadcast data cache terbaru seperti biasa
   broadcastLatestCacheData();
 
-  ws.on('message', (message) => {
+  ws.on('message', async (message) => {
     try {
-      const data = JSON.parse(message);
+      // 1. Pastikan message adalah string
+      if (typeof message !== 'string') {
+        if (message instanceof Buffer) {
+          message = message.toString('utf8');
+        } else {
+          console.warn('Received non-string message:', message);
+          return;
+        }
+      }
+
+      // 2. Skip pesan ping/pong WebSocket
+      if (message === 'ping' || message === 'pong') {
+        return;
+      }
+
+      // 3. Coba parsing JSON dengan error handling lebih baik
+      let data;
+      try {
+        data = JSON.parse(message);
+      } catch (parseError) {
+        console.error('Invalid JSON received:', message);
+        console.error('Parse error details:', parseError);
+        
+        // Kirim error response ke client
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            error: 'Invalid message format',
+            details: 'Message must be valid JSON',
+            example: { action: "getHistoryData" }
+          }));
+        }
+        return;
+      }
+
+      // 4. Proses aksi yang valid
       if (data.action === 'pumpIsActive') {
         const title = 'Pompa Aktif';
         const body = 'Pompa sedang aktif. Pastikan untuk memantau kondisi tanah.';
-        
         sendAlertNotification(title, body);
-      }
-
-      // Handler untuk permintaan data historis
-      else if (data.action === 'getHistoryData') async () => {
-        console.log(`Menerima permintaan data historis dari client`);
-        
+      } 
+      else if (data.action === 'getHistoryData') {
         try {
-          // Dapatkan tanggal hari ini (UTC+7)
           const now = new Date();
-          const jakartaOffset = 7 * 60 * 60 * 1000; // UTC+7 offset dalam milidetik
+          const jakartaOffset = 7 * 60 * 60 * 1000;
           const todayStart = new Date(now.getTime() + jakartaOffset);
           todayStart.setUTCHours(0, 0, 0, 0);
           const todayEnd = new Date(todayStart);
           todayEnd.setUTCDate(todayStart.getUTCDate() + 1);
           
-          // Query data dari MongoDB
           const HourlyData = mongoose.model('HourlyData');
           const historicalData = await HourlyData.find({
             type: 'hourly_averages',
@@ -678,7 +705,6 @@ wss.on('connection', (ws) => {
             }
           }).sort({ createdAt: 1 });
           
-          // Format data untuk dikirim ke client
           const formattedData = {
             topic: 'historicalData',
             data: historicalData.map(item => ({
@@ -689,25 +715,22 @@ wss.on('connection', (ws) => {
             timestamp: new Date().toISOString()
           };
           
-          // Kirim hanya ke client yang meminta
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(formattedData));
-            console.log(`Mengirim ${historicalData.length} data historis ke client`);
           }
         } catch (error) {
-          console.error('Gagal mengambil data historis:', error);
-          // Kirim pesan error ke client yang meminta
+          console.error('Failed to get history data:', error);
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
               topic: 'error',
-              message: 'Gagal mengambil data historis',
-              timestamp: new Date().toISOString()
+              message: 'Failed to retrieve historical data',
+              error: error.message
             }));
           }
         }
       }
     } catch (error) {
-      console.error('Error parsing message from client:', error);
+      console.error('General message handling error:', error);
     }
   });
 
