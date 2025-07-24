@@ -578,6 +578,10 @@ connectAwsWebSocket();
 wss.on('connection', (ws) => {
   clients.add(ws);
   ws.isAlive = true;
+  ws.on('ping', () => {
+    // Library ws sudah otomatis merespon pong
+    // console.debug('Protocol ping received');
+  });
   ws.on('pong', () => ws.isAlive = true);
 
   // TTL cache initial data
@@ -658,9 +662,9 @@ wss.on('connection', (ws) => {
       }
 
       // 2. Skip pesan ping/pong WebSocket
-      if (message === 'ping' || message === 'pong') {
-        return;
-      }
+      // if (message === 'ping' || message === 'pong') {
+      //   return;
+      // }
 
       // 3. Coba parsing JSON dengan error handling lebih baik
       let data;
@@ -740,21 +744,21 @@ wss.on('connection', (ws) => {
     pendingInitialDataClients = pendingInitialDataClients.filter(client => client !== ws);
   });
 
+  // Health check
+  setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if (!ws.isAlive) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
   ws.on('error', (err) => {
     console.error('WebSocket error:', err);
     clients.delete(ws);
     pendingInitialDataClients = pendingInitialDataClients.filter(client => client !== ws);
   });
 });
-
-// Health check
-setInterval(() => {
-  wss.clients.forEach((ws) => {
-    if (!ws.isAlive) return ws.terminate();
-    ws.isAlive = false;
-    ws.ping();
-  });
-}, 30000);
 
 // VAPID keys yang sudah digenerate
 // {
