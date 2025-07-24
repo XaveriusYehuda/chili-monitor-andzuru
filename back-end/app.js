@@ -245,7 +245,7 @@ function connectAwsWebSocket() {
     console.log('✅ Connected to AWS WebSocket');
     // Request initial data setiap kali terhubung
     setTimeout(() => {
-      wsExternal.send(JSON.stringify({ action: 'getLastData' }));
+      wsExternal.send(JSON.stringify({ "action": "getLastData" }));
     }, 500);
 
     // Setup hourly check
