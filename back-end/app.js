@@ -247,9 +247,9 @@ function connectAwsWebSocket() {
     setTimeout(() => {
       wsExternal.send(JSON.stringify({ "action": "getLastData" }));
     }, 500);
-    setTimeout(() => {
-      wsExternal.send(JSON.stringify({ "action": "getLastBigData" }));
-    }, 500);
+    // setTimeout(() => {
+    //   wsExternal.send(JSON.stringify({ "action": "getLastBigData" }));
+    // }, 500);
 
     // Setup hourly check
     setupHourlyCheck();
