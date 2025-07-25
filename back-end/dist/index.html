@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>An-Dzuru Monitor</title>
-  <script type="module" crossorigin src="/assets/index-DSCNO15Y.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CSvajXpn.css">
+  <script type="module" crossorigin src="/assets/index-B3fXzYSD.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DzLCQ4p7.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
   <!-- Hero Section Section Start -->
@@ -78,7 +78,7 @@
 
   <!-- Dashboard Section Start -->
   <section id="dashboard">
-    <div class="@container lg:max-h-[600px] xl:max-h-[800px]">
+    <div id="main-view" class="@container lg:max-h-[600px] xl:max-h-[800px] hidden">
       <div class="grid grid-colspan-1 ml-3 md:ml-6 my-8 lg:grid-cols-5 lg:grid-flow-row lg:grid-rows-3 lg:gap-3 2xl:items-stretch 2xl:mb-24">
         <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-2 shadow-tersier rounded-[40px] h-[120px] justify-center content-center 2xl:h-8/10">
           <div class="flex flex-nowrap lg:flex-wrap justify-center items-center self-center lg:mx-2 mx-5 2xl:h-full">
@@ -145,6 +145,14 @@
               Info
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="second-view" class="@container lg:max-h-[600px] xl:max-h-[800px]">
+      <div class="ml-2 mr-6 my-8 2xl:mb-24 flex flex-wrap justify-center items-center">
+        <div class="w-[93%] min-h-[95%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:justify-items-stretch mb-8 shadow-tersier rounded-[40px] px-6 py-6 content-center">
+          <canvas id="detailChart" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
         </div>
       </div>
     </div>
@@ -222,7 +230,7 @@
         </div>
         <div class="mt-6">
           <h4 class="text-xl/8 font-bold text-primary">Irrigation</h4>
-          <p class="text-lg/8 text-primary mb-4 text-justify text-wrap">Press FLUSH to turn on the watering pump for 30 seconds.</p>
+          <p class="text-lg/8 text-primary mb-4 text-justify text-wrap">Press FLUSH to turn on the watering pump for 15 seconds.</p>
         </div>
         <div class="mt-6">
           <h4 class="text-xl/8 font-bold text-primary text-justify">Data Graph</h4>
@@ -230,7 +238,7 @@
         </div>
         <div class="mt-6 mb-6">
           <h4 class="text-xl/8 font-bold text-primary">Ground Status</h4>
-          <p class="text-lg/8 text-primary mb-4 text-wrap text-justify">The soil status will turn red and have <strong>POOR</strong> status only if the moisture value is less than 15% or more than 85% and if the pH value is less than 5.5 or more than 8.5. Otherwise, the soil status will turn green and have a <strong>GOOD</strong> status.</p>
+          <p class="text-lg/8 text-primary mb-4 text-wrap text-justify">The soil status will turn red and have <strong>POOR</strong> status only if the moisture value is less than 10% or more than 90% and if the pH value is less than 5 or more than 9.5. Otherwise, the soil status will turn green and have a <strong>GOOD</strong> status.</p>
           <section class="flex flex-wrap justify-center items-center gap-4">
             <button id="get-ph-data-modal" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Get Ph Data</button>
             <button id="close-modal" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>

@@ -325,29 +325,7 @@ function connectAwsWebSocket() {
           });
           pendingInitialDataClients = [];
         }
-      }
-
-      if (parsed.action === 'initialBigData') {
-        console.log('Received initial big data:', parsed.data);
-        
-        try {
-          // Simpan ke MongoDB
-          HourlyData.create({
-            type: 'hourly_averages',
-            data: {
-              kelembapan: parsed.data.kelembapan,
-              ph: parsed.data.ph
-            },
-            createdAt: new Date()
-          })
-          .then(() => console.log('✅ Data historis berhasil disimpan ke MongoDB.'))
-          .catch(err => console.error('❌ Gagal menyimpan data historis ke MongoDB:', err));
-        } catch (error) {
-          console.error('Gagal menyimpan data historis ke MongoDB:', error);
-        }
-      }
-
-      if (parsed.action === 'dataUpdate') {
+      } else if (parsed.action === 'dataUpdate') {
         // console.log('Accepted Data: ', parsed.data);
 
         const sensorPayload = parsed.data;
@@ -405,6 +383,24 @@ function connectAwsWebSocket() {
           // console.log(value);
           // console.table(value);
         // });
+      } else if (parsed.action === 'initialBigData') {
+        console.log('Received initial big data:', parsed.data);
+        
+        try {
+          // Simpan ke MongoDB
+          HourlyData.create({
+            type: 'hourly_averages',
+            data: {
+              kelembapan: parsed.data.kelembapan,
+              ph: parsed.data.ph
+            },
+            createdAt: new Date()
+          })
+          .then(() => console.log('✅ Data historis berhasil disimpan ke MongoDB.'))
+          .catch(err => console.error('❌ Gagal menyimpan data historis ke MongoDB:', err));
+        } catch (error) {
+          console.error('Gagal menyimpan data historis ke MongoDB:', error);
+        }
       }
     } catch (error) {
       console.error('Error parsing external WebSocket message:', error);

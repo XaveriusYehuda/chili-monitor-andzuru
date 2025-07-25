@@ -493,14 +493,15 @@ function generateRandomString(length = 8) {
   return Math.random().toString(36).substring(2, 2 + length);
 }
 
-const notifModalContainer = document.getElementById('modal-notif-container');
-const notifModal = document.getElementById('notif-modal-alert');
-const notifMain = document.getElementById('modal-main-notif');
-const notifTitle = document.getElementById('title-notif-modal');
-const notifContent = document.getElementById('content-notif-modal');
-const notifCloseButton = document.getElementById('close-notif');
-
 function notificationAlert(title, content) {
+
+  const notifModalContainer = document.getElementById('modal-notif-container');
+  const notifModal = document.getElementById('modal-notif-alert');
+  const notifMain = document.getElementById('modal-main-notif');
+  const notifTitle = document.getElementById('title-notif-modal');
+  const notifContent = document.getElementById('content-notif-modal');
+  const notifCloseButton = document.getElementById('close-notif');
+
   if (!notifModalContainer || !notifModal || !notifMain || !notifContent || !notifCloseButton) {
     console.error('Modal elements not found in the DOM');
     return;
@@ -756,6 +757,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  // Logic to show "Welcome Back!" notification every 6 hours
+  const lastWelcomeBackShown = localStorage.getItem('lastWelcomeBackShown');
+  const sixHoursInMs = 6 * 60 * 60 * 1000;
+  const currentTime = Date.now();
+
+  if (!lastWelcomeBackShown || (currentTime - parseInt(lastWelcomeBackShown) > sixHoursInMs)) {
+    const title = "Welcome Back!";
+    const content = "It's good to see you again. ✨😊";
+    notificationAlert(title, content);
+    localStorage.setItem('lastWelcomeBackShown', currentTime);
+  }
 });
 
 
@@ -907,7 +920,9 @@ const dataHumidity = {
     data: [],
     borderColor: 'rgba(54, 162, 235, 1)',
     backgroundColor: 'rgba(54, 162, 235, 0.2)',
-    borderWidth: 2
+    borderWidth: 2,
+    stepped: true,
+    pointRadius: 0,
   }]
 };
 
