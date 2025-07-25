@@ -327,7 +327,7 @@ function connectAwsWebSocket() {
         }
       }
 
-      if (parsed.action === 'initialBigData') async () => {
+      if (parsed.action === 'initialBigData') {
         console.log('Received initial big data:', parsed.data);
         
         try {
@@ -340,8 +340,8 @@ function connectAwsWebSocket() {
             },
             createdAt: new Date()
           })
-          .then(() => console.log('Data tersimpan'))
-          .catch(err => console.error('Error:', err));
+          .then(() => console.log('✅ Data historis berhasil disimpan ke MongoDB.'))
+          .catch(err => console.error('❌ Gagal menyimpan data historis ke MongoDB:', err));
         } catch (error) {
           console.error('Gagal menyimpan data historis ke MongoDB:', error);
         }
