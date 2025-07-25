@@ -722,21 +722,21 @@ wss.on('connection', (ws) => {
     pendingInitialDataClients = pendingInitialDataClients.filter(client => client !== ws);
   });
 
-  // Health check
-  setInterval(() => {
-    wss.clients.forEach((ws) => {
-      if (!ws.isAlive) return ws.terminate();
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
-
   ws.on('error', (err) => {
     console.error('WebSocket error:', err);
     clients.delete(ws);
     pendingInitialDataClients = pendingInitialDataClients.filter(client => client !== ws);
   });
 });
+
+// Health check
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (!ws.isAlive) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
 
 // VAPID keys yang sudah digenerate
 // {
