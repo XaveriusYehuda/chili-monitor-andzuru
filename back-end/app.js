@@ -329,37 +329,16 @@ function connectAwsWebSocket() {
         
         try {
           // Simpan ke MongoDB
-          const dbData = {
+          HourlyData.create({
             type: 'hourly_averages',
             data: {
               kelembapan: parsed.data.kelembapan,
               ph: parsed.data.ph
             },
             createdAt: new Date()
-          };
-
-          // Gantilah 'HourlyData' dengan model Mongoose Anda
-          const HourlyData = mongoose.model('HourlyData', new mongoose.Schema({
-            type: String,
-            data: Object,
-            createdAt: { type: Date, default: Date.now }
-          }));
-
-          await HourlyData.create(dbData);
-          console.log('Data historis berhasil disimpan ke MongoDB');
-          
-          // Kirim notifikasi ke client
-          const bigDataMsg = {
-            topic: 'historicalData',
-            data: parsed.data,
-            timestamp: new Date().toISOString()
-          };
-          
-          // clients.forEach(client => {
-          //   if (client.readyState === WebSocket.OPEN) {
-          //     client.send(JSON.stringify(bigDataMsg));
-          //   }
-          // });
+          })
+          .then(() => console.log('Data tersimpan'))
+          .catch(err => console.error('Error:', err));
         } catch (error) {
           console.error('Gagal menyimpan data historis ke MongoDB:', error);
         }
