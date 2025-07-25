@@ -154,7 +154,7 @@ function addDataToCache(nilaiSensor, dataItem) {
 
   cache.sort((a, b) => a.timestamp - b.timestamp); // Pastikan tetap terurut
 
-  if (cache.length > 10) {
+  if (cache.length > 60) {
       cache.shift(); // FIFO
   }
   // console.log(`Menambahkan data baru ke cache untuk ${nilaiSensor}: ${new Date(normalizedTimestamp).toISOString()}, Value: ${normalizedValue}`);

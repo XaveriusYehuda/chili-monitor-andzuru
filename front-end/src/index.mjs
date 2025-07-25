@@ -902,7 +902,8 @@ function updateDataHumidity(humidityTimestamps, humidityValues) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
 
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    // return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${hours}:${minutes}`;
   }
 
   const fixTimeHumidity = humidityTimestamps.map(time => isoToCustomFormat(time));
@@ -921,8 +922,6 @@ const dataHumidity = {
     borderColor: 'rgba(54, 162, 235, 1)',
     backgroundColor: 'rgba(54, 162, 235, 0.2)',
     borderWidth: 2,
-    stepped: true,
-    pointRadius: 0,
   }]
 };
 
@@ -930,7 +929,25 @@ const configHumidity = {
   type: 'line',
   data: dataHumidity,
   options: {
+    responsive: true,
+    maintainAspectRatio: false,
     scales: {
+      // x: {
+      //   type: 'linear', // Gunakan 'linear' karena timestamp kita adalah angka jam (0-23)
+      //   min: 0, // Mulai dari jam 00
+      //   max: 59, // Sampai jam 23
+      //   ticks: {
+      //     // Pastikan setiap tick mewakili satu jam
+      //     stepSize: 1,
+      //     // Format label tick menjadi format jam yang lebih mudah dibaca
+      //     callback: function(value, index, values) {
+      //       return `23:${value.toString().padStart(2, '0')}`; 
+      //     }
+      //   },
+      //   grid: {
+      //     display: true // Tampilkan grid untuk setiap jam
+      //   }
+      // },
       y: {
         beginAtZero: false,
         // min dan max akan diatur otomatis oleh Chart.js sesuai data
