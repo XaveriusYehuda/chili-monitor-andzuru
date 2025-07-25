@@ -932,24 +932,11 @@ const configHumidity = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
-      // x: {
-      //   type: 'linear', // Gunakan 'linear' karena timestamp kita adalah angka jam (0-23)
-      //   min: 0, // Mulai dari jam 00
-      //   max: 59, // Sampai jam 23
-      //   ticks: {
-      //     // Pastikan setiap tick mewakili satu jam
-      //     stepSize: 1,
-      //     // Format label tick menjadi format jam yang lebih mudah dibaca
-      //     callback: function(value, index, values) {
-      //       return `23:${value.toString().padStart(2, '0')}`; 
-      //     }
-      //   },
-      //   grid: {
-      //     display: true // Tampilkan grid untuk setiap jam
-      //   }
-      // },
       y: {
         beginAtZero: false,
+        // ticks: {
+        //   stepSize: 0.2, // <- ini yang mengatur jarak antar garis grid Y
+        // }
         // min dan max akan diatur otomatis oleh Chart.js sesuai data
       }
     }
