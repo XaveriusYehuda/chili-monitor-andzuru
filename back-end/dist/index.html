@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>An-Dzuru Monitor</title>
-  <script type="module" crossorigin src="/assets/index-BuKK58V3.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DzLCQ4p7.css">
+  <script type="module" crossorigin src="/assets/index-BLWj5OUm.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-wYcET223.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
   <!-- Hero Section Section Start -->
@@ -110,12 +110,12 @@
             </h3>
           </div>
         </div>
-        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:justify-items-stretch lg:order-5 lg:row-span-2 mb-8 lg:col-span-2 shadow-tersier rounded-[40px] px-6 py-6 content-center">
+        <button class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:justify-items-stretch lg:order-5 lg:row-span-2 mb-8 cursor-pointer lg:col-span-2 shadow-tersier rounded-[40px] px-6 py-6 content-center">
           <canvas id="myChart" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
-        </div>
-        <div class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-6 lg:row-span-2 lg:col-span-2 shadow-tersier rounded-[40px] px-6 py-6 content-center">
+        </button>
+        <button class="w-[93%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] mb-8 lg:order-6 lg:row-span-2 cursor-pointer lg:col-span-2 shadow-tersier rounded-[40px] px-6 py-6 content-center">
           <canvas id="myChart1" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
-        </div>
+        </button>
         <div class="w-[93%] inline-flex bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:order-1 lg:row-span-3 mb-8 lg:items-center shadow-tersier rounded-[40px] content-center">
           <div class="flex flex-wrap mx-5 lg:mx-2 items-center justify-center">
             <h1 id="clock" class="text-4xl md:text-5xl font-extrabold text-primary text-center w-full py-2 my-4 lg:my-4 px-4 lg:px-0 lg:text-3xl xl:text-4xl">
@@ -149,13 +149,13 @@
       </div>
     </div>
 
-    <div id="second-view" class="@container lg:max-h-[600px] xl:max-h-[800px] hidden">
-      <div class="ml-2 mr-6 my-8 2xl:mb-24 flex flex-wrap justify-center items-center">
-        <div class="w-[93%] min-h-[95%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:justify-items-stretch mb-8 shadow-tersier rounded-[40px] px-6 py-6 content-center">
-          <canvas id="detailChart" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
-        </div>
-        <div class="w-[93%] min-h-[95%] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] lg:justify-items-stretch mb-8 shadow-tersier rounded-[40px] px-6 py-6 content-center">
-          <canvas id="detailChart" class="self-center justify-self-center w-full max-h-[300px] min-h-[200px]"></canvas>
+    <div id="second-view" class="@container lg:max-h-[600px] lg:min-h-[400px] xl:max-h-[800px] xl:min-h-[600px] hidden">
+      <div class="ml-2 mr-6 my-8 lg:mb-12 2xl:mb-28 flex flex-wrap justify-center min-h-[450px] items-center">
+        <div class="w-[93%] min-h-[400px] xl:min-h-[500px] block bg-secondary shadow-[18px_22px_0_rgba(48,152,187,1)] content-between lg:justify-items-stretch mb-8 shadow-tersier rounded-[40px] px-6 py-6">
+          <button id="backToMainView" class="lg:flex w-auto justify-self-start mx-4 px-6 py-[3px] text-base text-primary hover:text-tersier md:text-md lg:text-lg xl:text-xl border-2 rounded-xl border-primary hover:border-tersier">
+            Back
+          </button>
+          <canvas id="detailChart" class="self-center justify-self-center w-[90%] max-h-[80%] h-[80%] min-h-[200px]"></canvas>
         </div>
       </div>
     </div>

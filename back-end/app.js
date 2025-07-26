@@ -672,9 +672,9 @@ wss.on('connection', (ws) => {
       else if (data.action === 'getHistoryData') {
         try {
           const now = new Date();
+          const zeroUTC = now.setUTCHours(0, 0, 0, 0);
           const jakartaOffset = 7 * 60 * 60 * 1000;
-          const todayStart = new Date(now.getTime());
-          todayStart.setUTCHours(0, 0, 0, 0);
+          const todayStart = new Date(zeroUTC.getTime() - jakartaOffset);
           const todayEnd = new Date(todayStart);
           todayEnd.setUTCDate(todayStart.getUTCDate() + 1);
           

@@ -132,7 +132,65 @@ const SigV4Utils = {
   }
 };
 
+function formatAndFillSensorData(data, typeData) {
+  const result = [];
+
+  // Map awal: jam (HH:00) => nilai
+  const resultMap = {};
+
+  data.forEach(entry => {
+    const timestamp = new Date(entry.timestamp);
+    const jakartaTime = new Date(timestamp.getTime() + 7 * 60 * 60 * 1000); // UTC+7
+    const hour = timestamp.getHours().toString().padStart(2, '0') + ':00';
+
+    const sensorData = entry[typeData];
+    if (sensorData && typeof sensorData.average === 'number') {
+      resultMap[hour] = parseFloat(sensorData.average.toFixed(2));
+    }
+  });
+
+  // Isi data 24 jam (00:00 - 23:00) dengan forward fill
+  let lastValue = null;
+  for (let h = 0; h < 24; h++) {
+    const hourStr = h.toString().padStart(2, '0') + ':00';
+
+    if (resultMap[hourStr] != null) {
+      lastValue = resultMap[hourStr];
+    }
+
+    result.push({
+      time: hourStr,
+      value: lastValue !== null ? lastValue : null
+    });
+  }
+
+  return result;
+}
+
 let ws;
+let isHumidity = false;
+let pendingHistoryRequest = false;
+
+const initIsHumidity = () => {
+  const currentView = sessionStorage.getItem('currentView');
+  const humidityDetailData = sessionStorage.getItem('humidityDetailData');
+
+  if (currentView === 'second' && humidityDetailData === 'true') {
+    isHumidity = true;
+  } else if (currentView === 'second' && humidityDetailData === 'false') {
+    isHumidity = false;
+  }
+};
+
+function requestHistoryDataIfReady() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'getHistoryData' }));
+    pendingHistoryRequest = false;
+  } else {
+    // Simpan permintaan untuk nanti
+    pendingHistoryRequest = true;
+  }
+}
 
 const setupWebSocket = () => {
   if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
@@ -146,15 +204,38 @@ const setupWebSocket = () => {
 
   ws.onopen = async () => {
     console.log('✅ WebSocket connected to', wsUrl);
-    // Saat pertama kali terhubung, muat data historical dari IndexedDB
-    // await updateDataPhFromDb();
-    // await updateDataHumidityFromDb();
+    if (pendingHistoryRequest) {
+    ws.send(JSON.stringify({ action: 'getHistoryData' }));
+    pendingHistoryRequest = false;
+  }
   };
 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
       console.log('📨 Data diterima:', data);
+
+      if (data.topic === 'historicalData') {
+        const filterData = data.data;
+        console.log(filterData);
+        if (isHumidity === true) {    
+          if (filterData && Array.isArray(filterData)) {
+            const formattedFilled = formatAndFillSensorData(filterData, 'kelembapan'); 
+            console.log(formattedFilled);
+            const timeLabels = formattedFilled.map(item => item.time);
+            const kelembapanValues = formattedFilled.map(item => item.value);
+            updateDataDetail(timeLabels, kelembapanValues);
+          }
+        } else {
+          if (filterData && Array.isArray(filterData)) {
+            const formattedFilled = formatAndFillSensorData(filterData, 'ph'); 
+            console.log(formattedFilled);
+            const timeLabels = formattedFilled.map(item => item.time);
+            const phValues = formattedFilled.map(item => item.value);
+            updateDataDetail(timeLabels, phValues);
+          }
+        }
+      }
 
       // Destructure data
       const { topic, data: sensorData, chartData, timestamp: timestampCloudRaw } = data;
@@ -607,12 +688,45 @@ function isTokenLocallyValid(token) {
   }
 }
 
+// Fungsi untuk menampilkan secondView
+function showSecondView() {
+    mainView.classList.add('hidden');
+    secondView.classList.remove('hidden');
+    sessionStorage.setItem('currentView', 'second'); // Simpan status
+}
+
+// Fungsi untuk menampilkan mainView
+function showMainView() {
+    secondView.classList.add('hidden');
+    mainView.classList.remove('hidden');
+    sessionStorage.setItem('currentView', 'main'); // Simpan status
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  initIsHumidity();
+
   setupWebSocket();
   setupMQTT();
 
   openDb().then(() => {
   }).catch(err => console.error('Failed to open IndexedDB:', err));
+
+  const savedView = sessionStorage.getItem('currentView');
+
+  if (savedView === 'second') {
+    mainView.classList.add('hidden');
+    secondView.classList.remove('hidden');
+    console.log("web dalam tampilan second view, bersiap mengirim getHistoryData");
+    try { 
+      requestHistoryDataIfReady()
+    } catch (e) {
+      console.log("terjadi error saat mengirimkan getHistoryData :", e);
+    }
+  } else {
+    mainView.classList.remove('hidden');
+    secondView.classList.add('hidden'); // Default ke mainView jika tidak ada atau tidak dikenal
+    sessionStorage.removeItem('humidityDetailData');
+  }
 
   let userToken = localStorage.getItem('userToken');
   let tokenCreatedAt = localStorage.getItem('userToken_createdAt');
@@ -771,6 +885,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+let humidityChart = document.getElementById('myChart');
+let phChart = document.getElementById('myChart1');
+let detailChart = document.getElementById('detailChart');
 
 // Update grafik pH menggunakan data dari array phFromDb
 async function updateDataPhFromDb() {
@@ -856,7 +973,7 @@ const configPh = {
 
 // render init block
 const myChartPh = new Chart(
-  document.getElementById('myChart1'),
+  phChart,
   configPh
 );
 
@@ -944,9 +1061,103 @@ const configHumidity = {
 };
 
 const myChartHumidity = new Chart(
-  document.getElementById('myChart'),
+  humidityChart,
   configHumidity
 )
+
+function updateDataDetail(detailTimestamps, detailValues) {
+
+  function isoToCustomFormat(isoString) {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    // return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${hours}:${minutes}`;
+  }
+
+  const fixTimeDetail = detailTimestamps.map(time => isoToCustomFormat(time));
+  // console.log(fixTimeDetail);
+
+  myChartDetail.data.datasets[0].data = detailValues;
+  myChartDetail.data.labels = detailTimestamps;
+  myChartDetail.update();
+}
+
+const humidityDetailData = sessionStorage.getItem('humidityDetailData');
+let detailLabels = humidityDetailData === true ? 'Soil Moisture' : 'Soil pH';
+
+const detailData = {
+  labels: [],
+  datasets: [{
+    label: detailLabels,
+    data: [],
+    borderColor: 'rgba(54, 162, 235, 1)',
+    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+    borderWidth: 2,
+  }]
+};
+
+const configDetail = {
+  type: 'line',
+  data: detailData,
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: false,
+        // ticks: {
+        //   stepSize: 0.2, // <- ini yang mengatur jarak antar garis grid Y
+        // }
+        // min dan max akan diatur otomatis oleh Chart.js sesuai data
+      }
+    }
+  }
+};
+
+const myChartDetail = new Chart(
+  detailChart,
+  configDetail
+)
+
+// Detail Chart
+const mainView = document.getElementById('main-view');
+const secondView = document.getElementById('second-view');
+const backToMainView = document.getElementById('backToMainView');
+
+humidityChart.addEventListener('click', () => {
+  showSecondView();
+  const detailIsActive = {
+    "action": "getHistoryData",
+  };
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(detailIsActive));
+  }
+  isHumidity = true;
+  sessionStorage.setItem('humidityDetailData', 'true');
+});
+
+phChart.addEventListener('click', () => {
+  showSecondView();
+  const detailIsActive = {
+    "action": "getHistoryData",
+  };
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(detailIsActive));
+  }
+  isHumidity = false;
+  sessionStorage.setItem('humidityDetailData', 'false');
+});
+
+backToMainView.addEventListener('click', () => {
+  showMainView();
+  sessionStorage.removeItem('humidityDetailData');
+});
 
 // Hamburger
 const Hamburger = document.querySelector('#hamburger');
@@ -965,7 +1176,7 @@ window.addEventListener('click', function (e) {
   }
 });
 
-//modal
+// Modal
 const modal1 = document.getElementById('modal-container-1');
 const modal2 = document.getElementById('modal-container-2');
 
