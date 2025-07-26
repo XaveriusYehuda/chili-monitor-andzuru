@@ -674,7 +674,7 @@ wss.on('connection', (ws) => {
           const now = new Date();
           const zeroUTC = now.setUTCHours(0, 0, 0, 0);
           const jakartaOffset = 7 * 60 * 60 * 1000;
-          const todayStart = new Date(zeroUTC.getTime() - jakartaOffset);
+          const todayStart = new Date(zeroUTC - jakartaOffset);
           const todayEnd = new Date(todayStart);
           todayEnd.setUTCDate(todayStart.getUTCDate() + 1);
           
