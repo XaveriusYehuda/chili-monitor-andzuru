@@ -4,7 +4,8 @@ import { openDb, saveHumidityDataToDb, savePhDataToDb, getHumidityDataFromDb, ge
 // const mqttHost = 'a2spluztzgsdhl-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
 
 // ini untuk akun kutusapi99@gmail.com
-const mqttHost = 'ae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
+// const mqttHost = 'ae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
+const mqttHost = 'bae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
 
 const region = 'ap-southeast-1'; // contoh: ap-southeast-1
 
@@ -608,6 +609,194 @@ function notificationAlert(title, content) {
   };
 }
 
+function detailDataConfirmAlert(title, content) {
+  const notifModalContainer = document.getElementById('modal-notif-container');
+  const notifModal = document.getElementById('modal-notif-alert');
+  const notifMain = document.getElementById('modal-main-notif');
+  const notifTitle = document.getElementById('title-notif-modal');
+  const notifContent = document.getElementById('content-notif-modal');
+  const notifCloseButton = document.getElementById('close-notif');
+  const buttonContainer = document.getElementById('button-container');
+  const confirmButton = document.getElementById('detail-confirm');  
+
+  if (!notifModalContainer || !notifModal || !notifMain || !notifContent || !notifCloseButton || !buttonContainer) {
+    console.error('Modal elements not found in the DOM');
+    return;
+  }
+
+  if (confirmButton) {
+    confirmButton.remove();
+  }
+
+  // Buat tombol konfirmasi baru
+  const newConfirmButton = document.createElement('button');
+  newConfirmButton.id = 'detail-confirm';
+  newConfirmButton.className = 'bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary';
+  newConfirmButton.textContent = 'OK';
+  let humidityChart = document.getElementById('myChart');
+  let phChart = document.getElementById('myChart1');
+
+  const humidityDetailData = sessionStorage.getItem('humidityDetailData');
+
+  newConfirmButton.onclick = (event) => {
+    const detailIsActive = {
+      "action": "getHistoryData",
+    };
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(detailIsActive));
+    }
+    isHumidity = humidityDetailData === 'true' ? true : false;
+
+    showSecondView();
+
+    myChartDetail.data.datasets[0].label = humidityDetailData === 'true' ? 'Soil Moisture' : 'Soil pH';
+    myChartDetail.update();
+
+    notifModalContainer.classList.add('hidden');
+    notifModal.classList.add('hidden');
+
+    // Hapus tombol sebelumnya jika ada
+     event.currentTarget.remove();
+  };
+
+  buttonContainer.appendChild(newConfirmButton);
+  notifTitle.textContent = title;
+  notifContent.textContent = content;
+  notifModalContainer.classList.remove('hidden');
+  notifModal.classList.remove('hidden');
+
+  notifCloseButton.onclick = () => {
+    notifModalContainer.classList.add('hidden');
+    notifModal.classList.add('hidden');
+
+    // Hapus tombol sebelumnya jika ada
+    if (confirmButton) {
+      confirmButton.remove();
+    }
+  };
+
+  window.onclick = (event) => {
+    if (!notifMain.contains(event.target) && !confirmButton.contains(event.target) && !notifCloseButton.contains(event.target) && !humidityChart.contains(event.target) && !phChart.contains(event.target)) {
+      notifModalContainer.classList.add('hidden');
+      notifModal.classList.add('hidden');
+
+      // Hapus tombol sebelumnya jika ada
+      if (confirmButton) {
+        confirmButton.remove();
+      }
+    }
+  };
+}
+
+function pumpConfirmAlert(title, content) {
+  const notifModalContainer = document.getElementById('modal-notif-container');
+  const notifModal = document.getElementById('modal-notif-alert');
+  const notifMain = document.getElementById('modal-main-notif');
+  const notifTitle = document.getElementById('title-notif-modal');
+  const notifContent = document.getElementById('content-notif-modal');
+  const notifCloseButton = document.getElementById('close-notif');
+  const buttonContainer = document.getElementById('button-container');
+  const inputColumnContainer = document.getElementById('input-column-container');
+  const passwordInput = document.getElementById('password-input');
+  const togglePassword =document.getElementById('toggle-password');
+  const confirmButton = document.getElementById('detail-confirm');
+
+  if (!notifModalContainer || !notifModal || !notifMain || !notifContent || !notifCloseButton || !buttonContainer) {
+    console.error('Modal elements not found in the DOM');
+    return;
+  }
+
+  // Hapus tombol sebelumnya jika ada
+  if (confirmButton) {
+    confirmButton.remove();
+  }
+
+  // Buat tombol konfirmasi baru
+  const newConfirmButton = document.createElement('button');
+  newConfirmButton.id = 'detail-confirm';
+  newConfirmButton.className = 'bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary';
+  newConfirmButton.textContent = 'Confirm';
+
+  buttonContainer.appendChild(newConfirmButton);
+  
+  inputColumnContainer.classList.remove('hidden'); // Tampilkan input kolom
+  inputColumnContainer.classList.add('flex');
+
+  newConfirmButton.onclick = (event) => {
+  const realPassword = "Nyalakan100%";
+  const checkPassword = passwordInput.value;
+    if (checkPassword === realPassword) {
+      passwordInput.value = ''; // Kosongkan input password
+      inputColumnContainer.classList.add('hidden'); // Sembunyikan input kolom setelah konfirmasi
+      inputColumnContainer.classList.remove('flex'); // Sembunyikan input kolom setelah konfirmasi
+
+      const title = "Pump Activated";
+      const content = "Pump activated for 15 seconds";
+      window.nyalakanPompa();
+
+      const pumpIsActive = { action: 'pumpIsActive' };
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(pumpIsActive));
+      }
+
+      notifModalContainer.classList.add('hidden');
+      notifModal.classList.add('hidden');
+
+      event.currentTarget.remove();
+
+      notificationAlert(title, content);
+
+    } else if (checkPassword === '' || checkPassword !== realPassword) {
+      passwordInput.value = ''; // Kosongkan input password
+      inputColumnContainer.classList.add('hidden'); // Sembunyikan input kolom setelah konfirmasi
+      inputColumnContainer.classList.remove('flex'); // Sembunyikan input kolom setelah konfirmasi
+
+      const title = "Incorrect Password";
+      const content = "The password you entered is incorrect. Please try again.";
+      
+      notifModalContainer.classList.add('hidden');
+      notifModal.classList.add('hidden');
+
+      event.currentTarget.remove();
+
+      notificationAlert(title, content); 
+    }
+  };
+
+  notifTitle.textContent = title;
+  notifContent.textContent = content;
+  notifModalContainer.classList.remove('hidden');
+  notifModal.classList.remove('hidden');
+
+  notifCloseButton.onclick = () => {
+    notifModalContainer.classList.add('hidden');
+    notifModal.classList.add('hidden');
+    if (confirmButton) {
+      confirmButton.remove();
+    }
+    passwordInput.value = ''; // Kosongkan input password
+    inputColumnContainer.classList.add('hidden'); // Sembunyikan input kolom setelah konfirmasi
+    inputColumnContainer.classList.remove('flex'); // Sembunyikan input kolom setelah konfirmasi
+  };
+
+  window.onclick = (event) => {
+    if (!notifMain.contains(event.target) && !confirmButton.contains(event.target) && !notifCloseButton.contains(event.target) && !flushButton.contains(event.target) && !inputColumnContainer.contains(event.target) && !togglePassword.closest(event.target)) {
+      notifModalContainer.classList.add('hidden');
+      notifModal.classList.add('hidden');
+
+      if (confirmButton) {
+        confirmButton.remove();
+      }
+
+      passwordInput.value = ''; // Kosongkan input password
+      inputColumnContainer.classList.add('hidden'); // Sembunyikan input kolom setelah konfirmasi
+      inputColumnContainer.classList.remove('flex'); // Sembunyikan input kolom setelah konfirmasi
+    }
+  };
+}
+
+
 async function registerAndAutoLogin(attempt = 0) {
   const maxAttempts = 5; // Batasi percobaan untuk menghindari loop tak terbatas
 
@@ -712,10 +901,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }).catch(err => console.error('Failed to open IndexedDB:', err));
 
   const savedView = sessionStorage.getItem('currentView');
+  const humidityDetailData = sessionStorage.getItem('humidityDetailData');
 
   if (savedView === 'second') {
     mainView.classList.add('hidden');
     secondView.classList.remove('hidden');
+    myChartDetail.data.datasets[0].label = humidityDetailData === 'true' ? 'Soil Moisture' : 'Soil pH';
+    myChartDetail.update(); 
     console.log("web dalam tampilan second view, bersiap mengirim getHistoryData");
     try { 
       requestHistoryDataIfReady()
@@ -1088,13 +1280,13 @@ function updateDataDetail(detailTimestamps, detailValues) {
   myChartDetail.update();
 }
 
-const humidityDetailData = sessionStorage.getItem('humidityDetailData');
-let detailLabels = humidityDetailData === true ? 'Soil Moisture' : 'Soil pH';
+// const humidityDetailData = sessionStorage.getItem('humidityDetailData');
+// let detailLabels = humidityDetailData === 'true' ? 'Soil Moisture' : 'Soil pH';
 
 const detailData = {
   labels: [],
   datasets: [{
-    label: detailLabels,
+    // label: detailLabels,
     data: [],
     borderColor: 'rgba(54, 162, 235, 1)',
     backgroundColor: 'rgba(54, 162, 235, 0.2)',
@@ -1131,32 +1323,28 @@ const secondView = document.getElementById('second-view');
 const backToMainView = document.getElementById('backToMainView');
 
 humidityChart.addEventListener('click', () => {
-  showSecondView();
-  const detailIsActive = {
-    "action": "getHistoryData",
-  };
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(detailIsActive));
-  }
-  isHumidity = true;
   sessionStorage.setItem('humidityDetailData', 'true');
+  const title = "Details of Humidity Data";
+  const content = "Would you like to view details of humidity data?";
+  detailDataConfirmAlert(title, content);
 });
 
 phChart.addEventListener('click', () => {
-  showSecondView();
-  const detailIsActive = {
-    "action": "getHistoryData",
-  };
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(detailIsActive));
-  }
-  isHumidity = false;
   sessionStorage.setItem('humidityDetailData', 'false');
+  const title = "Details of PH Data";
+  const content = "Would you like to view details of pH data?";
+  detailDataConfirmAlert(title, content);
 });
 
 backToMainView.addEventListener('click', () => {
   showMainView();
   sessionStorage.removeItem('humidityDetailData');
+  const getMainViewData = {
+    "action": "getMainViewData",
+  };
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(getMainViewData));
+  }
 });
 
 // Hamburger
@@ -1174,6 +1362,47 @@ window.addEventListener('click', function (e) {
     Hamburger.classList.remove('hamburger-active');
     navMenu.classList.add('hidden');
   }
+});
+
+document.getElementById('toggle-password').addEventListener('click', function () {
+  const passwordInput = document.getElementById('password-input');
+  const eyeIcon = document.getElementById('eye-icon');
+  // const labelPasswordInput = document.getElementById('label-password-input');
+
+  const isPassword = passwordInput.type === 'password';
+  passwordInput.type = isPassword ? 'text' : 'password';
+
+  // if (isPassword) {
+  //   labelPasswordInput.classList.add('peer-[&:not(:placeholder-shown)]:text-tersier');
+  //   labelPasswordInput.classList.remove('peer-[&:not(:placeholder-shown)]:text-primary');
+  //   labelPasswordInput.classList.add('peer-focus:text-tersier');
+  //   labelPasswordInput.classList.remove('peer-focus:text-primary');
+  // } else {
+  //   labelPasswordInput.classList.remove('peer-[&:not(:placeholder-shown)]:text-tersier');
+  //   labelPasswordInput.classList.add('peer-[&:not(:placeholder-shown)]:text-primary');
+  //   labelPasswordInput.classList.remove('peer-focus:text-tersier');
+  //   labelPasswordInput.classList.add('peer-focus:text-primary');
+
+  // };
+
+  // Ganti ikon
+  eyeIcon.outerHTML = isPassword
+    ? `
+      <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none"
+        viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a10.054 10.054 0 012.387-3.773M6.7 6.7A10.05 10.05 0 0112 5c4.477 0 8.268 2.943 9.542 7a10.05 10.05 0 01-4.233 5.605M3 3l18 18" />
+      </svg>
+    `
+    : `
+      <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none"
+        viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+    `;
 });
 
 // Modal
@@ -1300,13 +1529,9 @@ window.addEventListener('click', function (e) {
 });
 
 flushButton.addEventListener('click', () => {
-  nyalakanPompa();
-  const pumpIsActive = {
-    action: 'pumpIsActive',
-  };
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(pumpIsActive));
-  }
+  const title = "Flush Confirmation";
+  const content = "Are you sure you want to flush the pump?";
+  pumpConfirmAlert(title, content);
 });
 
 function updateClock() {

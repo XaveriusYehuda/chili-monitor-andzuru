@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/aws-amplify@5.0.4/dist/aws-amplify.min.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>An-Dzuru Monitor</title>
-  <script type="module" crossorigin src="/assets/index-BLWj5OUm.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-wYcET223.css">
+  <script type="module" crossorigin src="/assets/index-DhTuX6QJ.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BMA7XCLV.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
   <!-- Hero Section Section Start -->
@@ -201,13 +201,51 @@
     </div>
   </section>
   
-  <section id="modal-notif-container" class="fixed hidden z-[5000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-600 opacity-75"></section>
-  <section id="modal-notif-alert" class="fixed hidden z-[6000] left-1/2 top-1/2 transform -translate-y-1/2 -translate-x-1/2 max-w-[700px] h-full overflow-auto">
+  <section id="modal-notif-container" class="hidden fixed z-[5000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-600 opacity-75"></section>
+  <section id="modal-notif-alert" class="hidden fixed z-[6000] left-1/2 top-1/2 transform -translate-y-1/2 -translate-x-1/2 max-w-[700px] h-full overflow-auto">
     <div class="flex justify-center items-center min-h-screen py-10">
       <div id="modal-main-notif" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-6 pr-6 pb-6 w-[87vw] max-w-[87vw] opacity-100">
         <h2 id="title-notif-modal" class="text-3xl md:text-4xl lg:text-5xl font-bold text-center text-primary my-6">Notification</h2>
-        <p id="content-notif-modal" class="text-lg/8 md:text-xl/9 lg:text-2xl/9 text-center text-primary mb-4">Nice to meet you!</p>
-        <div class="mt-6 mb-6 flex justify-center items-center gap-4">
+        <p id="content-notif-modal" class="text-lg/8 md:text-xl/9 lg:text-2xl/9 text-center text-primary mb-4 md:mb-6 lg:mb-8">Nice to meet you!</p>
+         <div id="input-column-container" class="relative w-[80%] mx-auto mb-6 justify-center items-center hidden">
+          <input
+            type="password"
+            id="password-input"
+            placeholder=" "
+            class="peer w-full h-[1.5rem] px-4 py-6 rounded-xl border-2 border-primary bg-secondary text-primary focus:outline-none focus:border-tersier pr-12"
+          />
+          <label 
+            id="label-password-input"
+            for="password-input"
+            class="absolute left-4 px-2 text-primary bg-secondary text-base 
+            transition-all duration-300 ease-out 
+            peer-placeholder-shown:text-base 
+            peer-placeholder-shown:text-primary 
+            peer-[&:not(:placeholder-shown)]:transform 
+            peer-[&:not(:placeholder-shown)]:-translate-y-6.5 
+            peer-[&:not(:placeholder-shown)]:text-sm 
+            peer-focus:transform 
+            peer-focus:-translate-y-6.5 
+            peer-focus:text-sm" 
+          >
+            What's the password?
+          </label>
+          <button
+            type="button"
+            id="toggle-password"
+            class="absolute inset-y-0 right-3 flex items-center text-primary hover:text-tersier"
+            tabindex="-1"
+          >
+            <!-- Ikon default: mata terbuka -->
+            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+        <div id="button-container" class="mt-8 pt-4 mb-6 flex justify-center items-center gap-4">
           <button id="close-notif" class="bg-primary w-[200px] text-white px-4 py-2 rounded-lg hover:bg-tersier active:bg-secondary">Close</button>
         </div>
       </div>
@@ -217,7 +255,7 @@
   <section id="modal-container-1" class="fixed hidden z-[1000] left-0 top-0 w-[100vw] h-[100vh] bg-gray-900 opacity-85"></section>
   <section id="modal-container-2" class="fixed hidden z-[2000] left-0 top-0 w-full h-full overflow-auto">
     <div class="flex justify-center items-center min-h-screen py-10">
-      <div id="modal-main" class="bg-secondary rounded-[35px] shadow-lg pt-6 pl-6 pr-6 pb-6 w-[87vw] max-w-[87vw] opacity-100">
+      <div id="modal-main" class="bg-secondary rounded-[35px] shadow-lg pt-6 px-6 md:px-10 lg:px-12 xl:px-14 2xl:px-16 pb-6 w-[87vw] max-w-[87vw] opacity-100">
         <h2 class="text-3xl font-bold text-primary my-6">How to use these systems?</h2>
         <div>
           <p class="text-lg/8 text-primary text-justify">This system is designed to assist chili farmers in monitoring soil conditions and managing watering automatically. Here are the steps to use it:</p>

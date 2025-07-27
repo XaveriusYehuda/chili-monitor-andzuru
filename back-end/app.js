@@ -710,6 +710,8 @@ wss.on('connection', (ws) => {
             }));
           }
         }
+      } else if (data.action === 'getMainViewData') {
+        broadcastLatestCacheData();
       }
     } catch (error) {
       console.error('General message handling error:', error);
