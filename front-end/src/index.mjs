@@ -4,8 +4,7 @@ import { openDb, saveHumidityDataToDb, savePhDataToDb, getHumidityDataFromDb, ge
 // const mqttHost = 'a2spluztzgsdhl-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
 
 // ini untuk akun kutusapi99@gmail.com
-// const mqttHost = 'ae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
-const mqttHost = 'bae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
+const mqttHost = 'ae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; // Ganti sesuai endpoint AWS IoT Core kamu
 
 const region = 'ap-southeast-1'; // contoh: ap-southeast-1
 
