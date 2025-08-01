@@ -137,20 +137,6 @@ function nyalakanPompa() {
   }
 
   const uploadTime = moment().format('YYYY-MM-DD HH:mm:ss');
-  const flushButton = document.getElementById('flushButton');
-
-  flushButton.classList.add('opacity-80');
-  flushButton.disabled = true; // Nonaktifkan tombol flush
-  flushButton.textContent = 'Sending ...'; // Ubah teks tombol
-  setTimeout(() => {
-    flushButton.textContent = 'Flushing ...'; // Kembalikan teks tombol
-  }, 2000);
-  setTimeout(() => {
-    flushButton.classList.remove('opacity-80');
-    flushButton.disabled = false; // Aktifkan kembali tombol setelah 5 detik
-    flushButton.textContent = 'Flush'; // Kembalikan teks tombol
-  }, 30000);
-
 
   const payload = JSON.stringify({ action: 'nyala' });
 
@@ -213,11 +199,6 @@ function updateClock() {
 
 setInterval(updateClock, 1000);
 updateClock();
-
-function nyalakanPompa() {
-  console.log("Pompa dinyalakan pada", moment.tz("Asia/Jakarta").format());
-}
-
 
 // Cache data sensor (FIFO, max 10 data per sensor)
 const sensorDataCache = new Map();
@@ -1227,7 +1208,7 @@ function checkAndSendAlertNotification(sensorType, value) {
     } else if (value < 10) {
       body = `Kelembapan tanah sangat rendah: ${value.toFixed(1)}%. Segera lakukan penyiraman!`;
       sendNotification = true;
-      nyalakanPompa(); // Nyalakan pompa jika kelembapan terlalu tinggi
+      nyalakanPompa(); 
     }
   } else if (sensorType === 'device/ph') {
     if (value > 9.5) {
@@ -1240,6 +1221,7 @@ function checkAndSendAlertNotification(sensorType, value) {
   }
 
   if (sendNotification) {
+    // Kirim notifikasi peringatan (selain notifikasi pompa yang sudah dikirim di atas)
     sendAlertNotification(title, body);
   }
 }
