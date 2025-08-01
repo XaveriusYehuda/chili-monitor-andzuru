@@ -11,6 +11,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken'); // Add this line
 const bcrypt = require('bcrypt'); // Add this line
 const { time } = require('console');
+const moment = require('moment-timezone');
 require('dotenv').config(); // npm install dotenv
 
 const app = express();
@@ -72,6 +73,151 @@ async function connectToMongoDB() {
 }
 
 connectToMongoDB();
+
+const mqttHost = 'ae2f0qpfo130e-ats.iot.ap-southeast-1.amazonaws.com'; 
+
+const region = 'ap-southeast-1'; 
+
+const identityPoolId = 'ap-southeast-1:66f016b1-04c1-4719-8774-bf55d732f161'; 
+
+// Konfigurasi Amplify
+AWS.config.region = region;
+AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+  IdentityPoolId: identityPoolId
+});
+
+let client;
+
+const setupMQTT = async () => {
+  try {
+    // await AWS.config.credentials.getPromise();
+    await new Promise((resolve, reject) => {
+      AWS.config.credentials.get((err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+    console.log('✅ Cognito Credentials loaded.');
+
+    const requestUrl = SigV4Utils.getSignedUrl(
+      mqttHost,
+      region,
+      AWS.config.credentials.accessKeyId,
+      AWS.config.credentials.secretAccessKey,
+      AWS.config.credentials.sessionToken
+    );
+
+    client = mqtt.connect(requestUrl, {
+      reconnectPeriod: 5000,
+      clientId: 'webclient_' + Math.floor(Math.random() * 10000),
+      protocol: 'wss',
+      clean: true
+    });
+
+    client.on('connect', () => {
+      console.log('✅ MQTT connected');
+    });
+
+    client.on('error', (err) => {
+      console.error('❌ MQTT Error:', err);
+    });
+
+  } catch (error) {
+    console.error('❌ Gagal load Cognito credentials:', error);
+  }
+};
+
+function nyalakanPompa() {
+  if (!client || !client.connected) {
+    console.error('🚫 MQTT belum terkoneksi. Tidak bisa publish.');
+    return;
+  }
+
+  const uploadTime = moment().format('YYYY-MM-DD HH:mm:ss');
+  const flushButton = document.getElementById('flushButton');
+
+  flushButton.classList.add('opacity-80');
+  flushButton.disabled = true; // Nonaktifkan tombol flush
+  flushButton.textContent = 'Sending ...'; // Ubah teks tombol
+  setTimeout(() => {
+    flushButton.textContent = 'Flushing ...'; // Kembalikan teks tombol
+  }, 2000);
+  setTimeout(() => {
+    flushButton.classList.remove('opacity-80');
+    flushButton.disabled = false; // Aktifkan kembali tombol setelah 5 detik
+    flushButton.textContent = 'Flush'; // Kembalikan teks tombol
+  }, 30000);
+
+
+  const payload = JSON.stringify({ action: 'nyala' });
+
+  client.publish('device/pompa', payload, { qos: 1 }, (err) => {
+    if (err) {
+      console.error('🚫 Publish error:', err);
+    } else {
+      console.log('📤 Pompa nyala command dikirim pada', uploadTime);
+    }
+  });
+};
+
+// Helper untuk generate AWS SigV4 signed URL
+const SigV4Utils = {
+  getSignedUrl: function (endpoint, region, accessKeyId, secretAccessKey, sessionToken) {
+    const time = new Date();
+    const dateStamp = time.toISOString().slice(0, 10).replace(/-/g, '');
+    const amzdate = time.toISOString().replace(/[:-]|\.\d{3}/g, '');
+    const service = 'iotdevicegateway';
+    const algorithm = 'AWS4-HMAC-SHA256';
+    const method = 'GET';
+    const canonicalUri = '/mqtt';
+
+    const credentialScope = dateStamp + '/' + region + '/' + service + '/aws4_request';
+    const canonicalQuerystring = 'X-Amz-Algorithm=' + algorithm
+        + '&X-Amz-Credential=' + encodeURIComponent(accessKeyId + '/' + credentialScope)
+        + '&X-Amz-Date=' + amzdate
+        + '&X-Amz-SignedHeaders=host';
+
+    const canonicalHeaders = 'host:' + endpoint + '\n';
+    const payloadHash = AWS.util.crypto.sha256('', 'hex');
+    const canonicalRequest = method + '\n' + canonicalUri + '\n' + canonicalQuerystring + '\n' + canonicalHeaders + '\nhost\n' + payloadHash;
+
+    const stringToSign = algorithm + '\n' + amzdate + '\n' + credentialScope + '\n' + AWS.util.crypto.sha256(canonicalRequest, 'hex');
+    const signingKey = AWS.util.crypto.hmac(AWS.util.crypto.hmac(AWS.util.crypto.hmac(AWS.util.crypto.hmac('AWS4' + secretAccessKey, dateStamp, 'buffer'), region, 'buffer'), service, 'buffer'), 'aws4_request', 'buffer');
+    const signature = AWS.util.crypto.hmac(signingKey, stringToSign, 'hex');
+
+    let url = 'wss://' + endpoint + canonicalUri + '?' + canonicalQuerystring + '&X-Amz-Signature=' + signature;
+
+    if (sessionToken) {
+      url += '&X-Amz-Security-Token=' + encodeURIComponent(sessionToken);
+    }
+
+    return url;
+  }
+};
+
+setupMQTT();
+
+function updateClock() {
+  const now = moment.tz("Asia/Jakarta");
+  const nowHour = now.hour();
+  const nowMinute = now.minute();
+  const nowSecond = now.second();
+
+  if (nowHour === 7 && nowMinute === 0 && nowSecond === 0) {
+    nyalakanPompa();
+  }
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+function nyalakanPompa() {
+  console.log("Pompa dinyalakan pada", moment.tz("Asia/Jakarta").format());
+}
+
 
 // Cache data sensor (FIFO, max 10 data per sensor)
 const sensorDataCache = new Map();
@@ -223,7 +369,6 @@ function setupHourlyCheck() {
     lastSentHour = now.getHours();
   }
 }
-
 
 function connectAwsWebSocket() {
   // Clear any existing reconnect interval to prevent multiple connections
@@ -1082,6 +1227,7 @@ function checkAndSendAlertNotification(sensorType, value) {
     } else if (value < 10) {
       body = `Kelembapan tanah sangat rendah: ${value.toFixed(1)}%. Segera lakukan penyiraman!`;
       sendNotification = true;
+      nyalakanPompa(); // Nyalakan pompa jika kelembapan terlalu tinggi
     }
   } else if (sensorType === 'device/ph') {
     if (value > 9.5) {
