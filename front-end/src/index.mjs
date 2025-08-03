@@ -1539,8 +1539,9 @@ function updateClock() {
   const nowMinute = now.minute();
   const nowSecond = now.second();
   const formattedTime = now.format('HH : mm : ss'); // Format waktu menjadi HH : mm : ss
+  const formattedDate = now.format('ddd, D MMMM YYYY'); // Format tanggal menjadi YYYY-MM-DD
   document.getElementById('clock').textContent = formattedTime; // Memperbarui elemen HTML dengan waktu
-
+  document.getElementById('date').textContent = formattedDate; // Memperbarui elemen HTML dengan tanggal
 
   let targetTime;
 
@@ -1551,10 +1552,9 @@ function updateClock() {
   }
 
   // Jalankan pompa hanya jika tepat jam 7:00:00
-  if (nowHour === 7 && nowMinute === 0 && nowSecond === 0) {
-    nyalakanPompa();
-  }
-
+  // if (nowHour === 7 && nowMinute === 0 && nowSecond === 0) {
+  //   nyalakanPompa();
+  // }
 
   const timeDifference = moment.duration(targetTime.diff(now));
 
