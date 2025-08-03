@@ -722,7 +722,7 @@ function pumpConfirmAlert(title, content) {
   inputColumnContainer.classList.add('flex');
 
   newConfirmButton.onclick = (event) => {
-  const realPassword = "Nyalakan100%";
+  const realPassword = "Ok!";
   const checkPassword = passwordInput.value;
     if (checkPassword === realPassword) {
       passwordInput.value = ''; // Kosongkan input password
