@@ -699,7 +699,6 @@ function pumpConfirmAlert(title, content) {
   const passwordInput = document.getElementById('password-input');
   const togglePassword =document.getElementById('toggle-password');
   const confirmButton = document.getElementById('detail-confirm');
-  // const flushButton = document.getElementById('flushButton');
 
   if (!notifModalContainer || !notifModal || !notifMain || !notifContent || !notifCloseButton || !buttonContainer) {
     console.error('Modal elements not found in the DOM');
@@ -781,13 +780,7 @@ function pumpConfirmAlert(title, content) {
   };
 
   window.onclick = (event) => {
-    if (!notifMain.contains(event.target) 
-        && !(confirmButton && confirmButton.contains(event.target)) 
-        && !notifCloseButton.contains(event.target) 
-        // && !(flushButton && flushButton.contains(event.target)) 
-        && !inputColumnContainer.contains(event.target) 
-        && !(togglePassword && togglePassword.closest(event.target))
-    ) {
+    if (!notifMain.contains(event.target) && !notifCloseButton.contains(event.target) && !inputColumnContainer.contains(event.target) && !flushButton.contains(event.target) && !togglePassword.closest(event.target)) {
       notifModalContainer.classList.add('hidden');
       notifModal.classList.add('hidden');
 
