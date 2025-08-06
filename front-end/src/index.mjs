@@ -781,7 +781,13 @@ function pumpConfirmAlert(title, content) {
   };
 
   window.onclick = (event) => {
-    if (!notifMain.contains(event.target) && !confirmButton.contains(event.target) && !notifCloseButton.contains(event.target) && !flushButton.contains(event.target) && !inputColumnContainer.contains(event.target) && !togglePassword.closest(event.target)) {
+    if (!notifMain.contains(event.target) 
+        && !(confirmButton && confirmButton.contains(event.target)) 
+        && !notifCloseButton.contains(event.target) 
+        && !(flushButton && flushButton.contains(event.target)) 
+        && !inputColumnContainer.contains(event.target) 
+        && !(togglePassword && togglePassword.closest(event.target))
+    ) {
       notifModalContainer.classList.add('hidden');
       notifModal.classList.add('hidden');
 
